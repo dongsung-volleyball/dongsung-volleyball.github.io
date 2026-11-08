@@ -1,5 +1,5 @@
 // ===== 설정 (여기만 바꾸면 돼요) =====
-const GAME_VERSION = 'v9.3'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
+const GAME_VERSION = 'v9.3.1'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
 const CONFIG = {
   WIN_SCORE: 15,          // 몇 점 내면 이기는지
   FPS: 25,                // 1초에 몇 번 움직이는지 (원작 보통 속도 25)
@@ -12604,8 +12604,8 @@ function pxBall() {
   if (X.vortexT > 0 && Math.abs(ball.x - NET_X) < 44 && ball.y < 210) { ball.vy += (Math.random() - 0.5) * 2.2; ball.vx += (Math.random() - 0.5) * 1.2; }
   if (X.beads && X.hitCD <= 0) for (const q of X.beads) if (Math.hypot(ball.x - q.x, ball.y - q.y) < 16) { ball.vx = -ball.vx * 0.8 + (Math.random() - 0.5) * 4; ball.vy = -Math.abs(ball.vy) * 0.6 - 2; X.hitCD = 10; effects.push({ x: q.x, y: q.y, t: 5 }); bossSfx('zap'); break; }
   const crossing = ball.vx > 0 && !ball.byBoss && ball.x > NET_X - 6 && ball.x < NET_X + 30 && X.hitCD <= 0;
-  if (crossing && X.reflT > 0 && ball.power && !(ball.pierce > 0)) { ball.vx = -Math.abs(ball.vx) * 0.6; ball.vy = Math.min(ball.vy, -4); ball.power = false; if (B.fx) bossApplyFx(ball.y, true); X.hitCD = 12; heavy(NET_X + 10, ball.y, 1.2); bossSfx('zap'); bossPop('반사! 피해는 들어갔지만 공이 튕겨 나옴', PX_COL[bossKind].a, 104, 24); }
-  else if (crossing && X.wallT > 0 && ball.y > 120 && !(ball.pierce > 0)) { ball.vx = -Math.abs(ball.vx) * 0.55; ball.vy = Math.min(ball.vy, -5); ball.power = false; if (B.fx) bossApplyFx(ball.y, true); X.hitCD = 12; heavy(NET_X + 10, ball.y, 1.2); bossSfx('zap'); bossPop('장벽! 피해는 들어감 · 높게 넘기면 통과', PX_COL[bossKind].a, 104, 24); }
+  if (crossing && X.reflT > 0 && ball.power && !(ball.pierce > 0)) { ball.vx = -Math.abs(ball.vx) * 0.6; ball.vy = Math.min(ball.vy, -4); ball.power = false; B.fx = null; X.hitCD = 12; heavy(NET_X + 10, ball.y, 1.2); bossSfx('zap'); bossPop('반사! 강스파이크는 튕겨 나감', PX_COL[bossKind].a, 104, 24); }
+  else if (crossing && X.wallT > 0 && ball.y > 120 && !(ball.pierce > 0)) { ball.vx = -Math.abs(ball.vx) * 0.55; ball.vy = Math.min(ball.vy, -5); ball.power = false; B.fx = null; X.hitCD = 12; heavy(NET_X + 10, ball.y, 1.2); bossSfx('zap'); bossPop('장벽! 더 높게 넘겨', PX_COL[bossKind].a, 104, 24); }
 }
 // 보스 페이즈 기믹을 엔진으로 바꿔치기 (이사장은 그대로)
 { const b1 = bossTickP1, b2 = bossTickP2, b3 = bossTickP3;
@@ -13162,4 +13162,20 @@ function aiSafeX(p, hz, react) {
   if (p.nojumpT > 0 && inp.y < 0) inp.y = 0;                                                          // 점프 봉인
   if (p.iceT > 0) { const v = p.iceV || 0; if (Math.abs(v) > 1 && (inp.x === 0 || (Math.abs(v) > 2.6 && Math.sign(inp.x) === Math.sign(v)))) inp.x = -Math.sign(v); } // 얼음판 브레이크
   return inp;
+}; }
+// ===== (v9.3.1) 보스전: 차명준 'BSOD 복마어주자 방화벽'으로 보스 공을 되받아치면 그 공에 피해가 실림 =====
+// 방화벽은 보스가 친 공을 보스 코트로 내리꽂음 → 예전엔 그 공에 피해(B.fx)가 없어서 득점 피해(5%)만 들어갔음
+// 이제: PERFECT 판정 × 3단 연계급 카운터 (속성 = 차명준 자동 락온 속성) → 보스 몸에 맞거나 보스 코트에 떨어지면 bossApplyFx로 피해
+{ const base = jjhBlockCheck; jjhBlockCheck = function (prevX) {
+  const n0 = matrixHits.length;
+  base(prevX);
+  if (!bossMode || !BOSS || state !== 'play' || matrixHits.length === n0) return;
+  const h = matrixHits[matrixHits.length - 1];
+  if (!h.fw || h.side !== 0) return;
+  const q = bossParty().find((p) => p.fwT > 0); if (!q) return;
+  const i = bossIdx(q), elem = autoElem(q);
+  BOSS.fx = { i, judge: 2, jk: 'P', combo: 3, n: 3, elems: [elem, elem, elem], elem, fusion: null, fw: true };
+  ball.byBoss = false; ball.fx = '60,120,255';
+  BOSS.stats.clutch[i]++; BOSS.rallyG += 8;
+  bossPop(`🛡 방화벽 카운터! 되받아친 공 = PERFECT ×3 피해 (${ELEM[elem].ic})`, '#8cb4ff', 110, 34);
 }; }

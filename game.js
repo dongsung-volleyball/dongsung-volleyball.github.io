@@ -1,5 +1,5 @@
 // ===== 설정 (여기만 바꾸면 돼요) =====
-const GAME_VERSION = 'v10.6'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
+const GAME_VERSION = 'v10.7'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
 const CONFIG = {
   WIN_SCORE: 15,          // 몇 점 내면 이기는지
   FPS: 25,                // 1초에 몇 번 움직이는지 (원작 보통 속도 25)
@@ -550,7 +550,7 @@ function updatePlayer(p, inp) {
   if (p.state === DIVE) p.x += p.diveDir * 8 * slow;
   else p.x += inp.x * 6 * slow * (p.ai ? AI_LEVELS[p.aiLevel ?? aiLevel].move || 1 : 1); // AI 난이도별 이동속도
   const ndx = NET_X - 216, [mn, mx] = p.boss ? [266 + ndx, 398] : p.side === 0 ? [32, 184 + ndx] : [248 + ndx, 400]; // 선 긋기: 네트가 움직이면 코트도
-  if (bossMode) bossBlockMove(p); // 책상 장해물
+  if (bossMode) bossBlockMove(p); // 심판대 장해물
   p.x = Math.max(mn, Math.min(mx, p.x));
 
   // 점프 (원작: y가 정확히 땅(244)이고 다이빙·누움 상태가 아닐 때)
@@ -8933,7 +8933,7 @@ function netDraw() {
 { const baseDraw = draw; draw = function () { baseDraw(); netDraw(); }; }
 
 // =====================================================================
-// ===== 보스전 (v7.0) — '절대 통제자' 마왕 이사장 =====
+// ===== 보스전 (v7.0) — '절대 통제자' 마왕 주심 =====
 // 파티 3명(왼쪽) vs 거대 보스(오른쪽). players = [1P, 보스, 2P, 3P]
 // 보스도 '선수'라서 공은 AI처럼 받아치고, 스킬 디버프(멈칫·감속·시야 차단…)도 그대로 먹힘.
 // 데미지·쉴드·게이지·기믹은 전부 update() 안에서 계산 (온라인에서도 똑같이 나오게 Math.random만 씀)
@@ -8985,22 +8985,22 @@ const SKILL_ELEM = {
 };
 const BOSS_TRUE = ['kim:lincoln', 'math:euler', 'history:ship', 'yean:evict', 'cmj:bigbang', 'kdh:domain']; // 확정 득점 스킬 = 쉴드 무시 고정 피해
 const BOSS_LINES = { // 보스 대사 (실존 인물 이름 없이)
-  start: ['교칙 제1조. 랠리는 내가 허락할 때만 한다.', '훈화 말씀이 있겠습니다. 길게.', '자네들, 학생부로 따라오게.'],
-  hit: ['감히 이사장실에 공을?!', '벌점 추가다!', '그 정도로는 내 결재가 안 나지.'],
-  point: ['교칙 위반! 1점!', '복장 불량!', '기강이 해이하구나.'],
-  gaze: ['무궁화 꽃이 피었습니다…', '움직이면 벌점이다.'],
-  desk: ['책상 정렬! 출석부 투하!'],
-  rage: ['무차별 계도 스파이크!!'],
-  groggy: ['크윽… 내 권위가…!'],
-  p2: ['학생부 출동! 지금부터 생활지도다!', '두발 검사, 실시!'], p3: ['졸업은… 내가 허락하지 않는다.', '멸망의 졸업식을 시작하지.'],
-  ban: ['소지품 검사! 그건 압수다.'], mob: ['선도부, 네트를 막아라!'], mute: ['음소거!!'], punish: ['체벌… 집행.'],
-  illu: ['진짜 공을 찾아보거라.'], dis: ['역사가 너희를 심판하리라!'], exec: ['벌점 100점. 즉형 집행이다.'],
+  start: ['삐익-! 경기 규정 제1조. 판정은 내가 한다.', '오늘 경기, 내 휘슬 하나로 끝내 주지.', '어서 와라. 공정한 경기는 여기 없다.'],
+  hit: ['감히 심판에게 공을?!', '경고 한 장 추가다!', '그 정도론 내 판정 못 뒤집어.'],
+  point: ['반칙! 1점!', '네트 터치! 내 눈은 못 속여.', '오버 넷! 아웃!'],
+  gaze: ['무궁화 꽃이 피었습니다…', '움직이면 경고다.'],
+  desk: ['심판대 투하! 규정집도 받아라!'],
+  rage: ['무자비 오심 스파이크!!'],
+  groggy: ['크윽… 내 휘슬이…!'],
+  p2: ['부심, 선심 전원 출동!', '유니폼 검사, 실시!'], p3: ['우승은… 내가 허락하지 않는다.', '멸망의 결승전을 시작하지.'],
+  ban: ['장비 검사! 그건 압수다.'], mob: ['선심단, 네트를 막아라!'], mute: ['음소거!!'], punish: ['페널티… 집행.'],
+  illu: ['진짜 공을 찾아보거라.'], dis: ['비디오 판독이 너희를 심판하리라!'], exec: ['경고 100장. 몰수패를 선언한다.'],
 };
 
 // ----- 보스 캐릭터 등록 (선택 화면엔 안 나옴: NCHAR 뒤에 붙음) -----
 const BOSS_I = CHARACTERS.length;
-CHARACTERS.push({ name: '마왕 이사장', gender: 'm', grade: 'BOSS', type: 'sprite', boss: true, w: 64, h: 67, skill: null,
-  skillName: '절대 통제', desc: ['절대 통제자', 'The Absolute Chairman'] });
+CHARACTERS.push({ name: '마왕 주심', gender: 'm', grade: 'BOSS', type: 'sprite', boss: true, w: 64, h: 67, skill: null,
+  skillName: '절대 판정', desc: ['절대 판정자', 'The Absolute Referee'] });
 GRADE_COLOR.BOSS = '#ff2a6a';
 
 // ----- 도트 마왕 그리기 (48x64 칸 → 4배 캔버스) — 네트(왼쪽)를 보고 있음 -----
@@ -9026,22 +9026,18 @@ function bossGrid(pose) {
     // 다리 + 구두 (왼쪽을 봄)
     R(18, 47, 6, 12, 'm'); R(26, 47, 6, 12, 'm'); R(23, 47, 3, 4, 'm');
     R(15, 59, 9, 3, 'K'); R(24, 59, 8, 3, 'K'); P(15, 58, 'K'); P(24, 58, 'K');
-    // 양복 몸통
-    R(15, 23, 20, 25, 'n'); R(14, 27, 22, 20, 'n'); R(16, 46, 18, 3, 'n');
-    R(20, 23, 10, 12, 'w'); // 셔츠
-    R(24, 24, 2, 2, 't'); R(23, 26, 4, 9, 't'); R(24, 35, 2, 2, 't'); // 넥타이
-    for (let i = 0; i < 10; i++) { P(19 - Math.floor(i / 3), 23 + i, 'N'); P(30 + Math.floor(i / 3), 23 + i, 'N'); } // 라펠
-    R(15, 30, 1, 14, 'N'); R(34, 30, 1, 14, 'N');
-    // 금 메달 목걸이 (이사장 메달)
-    for (let i = 0; i < 7; i++) { P(17 + i, 24 + i, 'g'); P(32 - i, 24 + i, 'g'); }
-    R(23, 31, 4, 4, 'g'); R(24, 32, 2, 2, 'G'); P(24, 31, 'e');
-    R(17, 39, 16, 1, 'N'); R(21, 40, 2, 1, 'g'); R(27, 40, 2, 1, 'g'); // 단추
-    // 뒤쪽 팔
-    R(34, 25, 5, 16, 'n'); R(35, 40, 4, 4, 's'); R(35, 43, 4, 1, 'S');
-    // 앞쪽 팔 + 의사봉
-    R(9, 25, 7, 6, 'n'); R(7, 30, 6, 10, 'n'); R(6, 39, 6, 2, 'w'); R(6, 41, 5, 4, 's'); R(6, 44, 5, 1, 'S');
-    for (let i = 0; i < 12; i++) R(7 - Math.floor(i * 0.45), 41 - i, 2, 2, 'b'); // 손잡이 (위로 비스듬히)
-    R(-1, 23, 10, 7, 'B'); R(-1, 23, 10, 1, 'b'); R(3, 23, 2, 7, 'g'); R(-1, 29, 10, 1, 'b'); // 의사봉 머리
+    // 심판 셔츠 (흑백 줄무늬)
+    R(15, 23, 20, 25, 'w'); R(14, 27, 22, 20, 'w'); R(16, 46, 18, 3, 'm');
+    for (let x = 15; x < 36; x += 4) R(x, 25, 2, 21, 'h');
+    R(18, 23, 13, 2, 'h'); // 검은 깃
+    // 금 호루라기 목걸이
+    for (let i = 0; i < 6; i++) { P(19 + (i >> 1), 25 + i, 'g'); P(30 - (i >> 1), 25 + i, 'g'); }
+    R(22, 31, 6, 3, 'g'); R(27, 32, 3, 1, 'g'); R(23, 32, 2, 1, 'G'); P(23, 31, 'e');
+    // 뒤쪽 팔 (반팔 + 맨팔)
+    R(34, 25, 5, 7, 'w'); R(36, 25, 1, 7, 'h'); R(35, 32, 4, 11, 's'); R(35, 43, 4, 1, 'S');
+    // 앞쪽 팔 + 레드카드
+    R(9, 25, 7, 6, 'w'); R(11, 25, 1, 6, 'h'); R(14, 25, 1, 6, 'h'); R(7, 30, 5, 9, 's'); R(6, 39, 6, 5, 's'); R(6, 44, 5, 1, 'S');
+    R(1, 25, 8, 13, 'r'); R(1, 37, 8, 1, 'R'); R(2, 26, 1, 10, 'p'); // 레드카드 (손 위로 번쩍)
     // 목 + 얼굴 (왼쪽 옆모습)
     R(20, 20, 8, 4, 's'); R(20, 23, 8, 1, 'S');
     R(16, 8, 15, 14, 's'); R(15, 11, 2, 9, 's'); R(13, 14, 3, 3, 's'); P(13, 16, 'S'); // 코
@@ -9173,7 +9169,7 @@ function bossDamage(amount, o = {}) {
   const B = BOSS; if (!B || B.hp <= 0 || amount <= 0) return 0;
   const b = players[1], src = o.src ?? -1;
   if (B.orbs && B.orbs.length) { if (B.invT <= 0) { B.invT = 30; bossPop('무적! 원소 궤도성부터 부숴', '#d8d8e8', 96, 24); } return 0; } // 페이즈 3 시작: 무적
-  if (B.buffT > 0) amount *= 2;            // 교칙 준수율 MAX 버프
+  if (B.buffT > 0) amount *= 2;            // 페어플레이 MAX 버프
   let tru = o.tru || B.swagT > 0; // 꺼드럭: 방어력 0% (트루)
   if (B.groggyT > 0) { amount *= o.fixed ? 1 : o.hit ? 3 : 1.5; tru = true; } // 그로기: 공 타격은 트루 데미지 300% (스킬 150%, 득점 폭발은 그대로)
   const x = o.x ?? b.x, y = o.y ?? hitTop(b) + 10;
@@ -9402,7 +9398,7 @@ function bossTick() {
   B.brk = Math.max(0, Math.min(100, B.brk));
   if (B.rage >= 100 && !B.rageArmed && B.groggyT === 0) { B.rage = 0; B.rageArmed = true; bossPop('⚠ 통제도 MAX! 다음 공격 주의', '#ff3048', 120, 50); }
   B.rage = Math.min(100, B.rage);
-  if (B.rallyG >= 100) { B.rallyG = 0; B.buffT = 250; bossParty().forEach((p) => { p.mana = manaMax(p); p.mpAcc = 0; }); bossPop('교칙 준수율 100%! 전원 MP 회복 + 10초 데미지 2배', '#ffe14a', 120, 60); bossSfx('fusion'); }
+  if (B.rallyG >= 100) { B.rallyG = 0; B.buffT = 250; bossParty().forEach((p) => { p.mana = manaMax(p); p.mpAcc = 0; }); bossPop('페어플레이 100%! 전원 MP 회복 + 10초 데미지 2배', '#ffe14a', 120, 60); bossSfx('fusion'); }
   if (B.invT > 0) B.invT--;
   if (B.phase === 1) bossTickP1(D, b);
   else if (B.phase === 2) bossTickP2(D, b);
@@ -9414,14 +9410,14 @@ function bossTick() {
   if (B.lineT > 0) B.lineT--;
   if (B.bolts) { B.bolts.forEach((q) => q.t--); B.bolts = B.bolts.filter((q) => q.t > 0); }
 }
-function bossTickP1(D, b) { // 페이즈 1: 선생님의 시선 + 책상 장해물
+function bossTickP1(D, b) { // 페이즈 1: 주심의 시선 + 심판대 장해물
   const B = BOSS;
   // 기믹 1-1: 선생님의 시선 (보스 HP 80% 이하부터)
   if (!B.gazeArmed && B.hp <= B.hpMax * 0.8) { B.gazeArmed = true; B.gazeNext = 30; }
   if (B.gazeArmed && !B.gaze && B.groggyT === 0 && --B.gazeNext <= 0) { B.gaze = { ph: 'count', t: 0, dur: 75, caught: [] }; bossSay('gaze'); bossSfx('gaze'); }
   const G = B.gaze;
   if (G) {
-    if (b.blindT > 0 || B.groggyT > 0) { B.gaze = null; B.gazeNext = D.gaze; bossPop('시야 차단! 선생님의 시선 무효', '#7dff9a', 130, 40); B.rallyG += 15; }
+    if (b.blindT > 0 || B.groggyT > 0) { B.gaze = null; B.gazeNext = D.gaze; bossPop('시야 차단! 주심의 시선 무효', '#7dff9a', 130, 40); B.rallyG += 15; }
     else if (G.ph === 'count') {
       G.t += b.slowT > 0 ? 0.1 : 1; // 시간 팽창이면 돌아보는 속도 90% 느려짐
       if (G.t >= G.dur) { G.ph = 'look'; G.t = 0; G.pos = bossParty().map((p) => [p.x, p.y, p.state]); bossSfx('look'); }
@@ -9437,10 +9433,10 @@ function bossTickP1(D, b) { // 페이즈 1: 선생님의 시선 + 책상 장해�
           popups.push({ text: '움직였다! 낙뢰 + 3초 스턴', x: p.x, y: p.y - 60, t: 40, color: '#ffe14a' });
         }
       });
-      if (G.t >= 30) { B.gaze = null; B.gazeNext = D.gaze; if (!G.caught.length) { bossPop('완벽한 정지! 교칙 준수 +15%', '#7dff9a', 130, 30); B.rallyG += 15; } }
+      if (G.t >= 30) { B.gaze = null; B.gazeNext = D.gaze; if (!G.caught.length) { bossPop('완벽한 정지! 페어플레이 +15%', '#7dff9a', 130, 30); B.rallyG += 15; } }
     }
   }
-  // 기믹 1-2: 책상 장해물 쇄도 (15초마다)
+  // 기믹 1-2: 심판대 장해물 쇄도 (15초마다)
   if (--B.deskNext <= 0) {
     B.deskNext = D.desk; bossSay('desk');
     const xs = [], n = 3;
@@ -9453,11 +9449,11 @@ function bossTickP1(D, b) { // 페이즈 1: 선생님의 시선 + 책상 장해�
       bossParty().forEach((p) => { if (Math.abs(p.x - d.x) < 22 && p.y > P_GROUND_Y - 30) { p.freezeT = Math.max(p.freezeT || 0, 25); popups.push({ text: '쿵!', x: p.x, y: p.y - 40, t: 16, color: '#ffb0a0' }); } }); } }
     else d.life--;
     // 키다리 거인화: 밟아 부숨
-    for (const p of bossParty()) if (d.land && p.skillT > 0 && CHARACTERS[p.char].skill === 'giant' && Math.abs(p.x - d.x) < 34) { d.life = 0; d.smash = true; bossDamage(D.dmg * 1.5, { elem: 'phys', src: bossIdx(p), quiet: true }); popups.push({ text: '쾅! 거인이 책상을 밟았다', x: d.x, y: 200, t: 24, color: '#d8d8e8' }); }
+    for (const p of bossParty()) if (d.land && p.skillT > 0 && CHARACTERS[p.char].skill === 'giant' && Math.abs(p.x - d.x) < 34) { d.life = 0; d.smash = true; bossDamage(D.dmg * 1.5, { elem: 'phys', src: bossIdx(p), quiet: true }); popups.push({ text: '쾅! 거인이 심판대을 밟았다', x: d.x, y: 200, t: 24, color: '#d8d8e8' }); }
   }
   B.desks = B.desks.filter((d) => d.life > 0);
 }
-function bossBlockMove(p) { // 책상에 막힘 (점프하면 넘어감)
+function bossBlockMove(p) { // 심판대에 막힘 (점프하면 넘어감)
   if (!BOSS || p.boss) { p.bx = p.x; return; }
   for (const d of BOSS.desks) {
     if (!d.land || p.y < P_GROUND_Y - 22) continue;
@@ -9473,9 +9469,9 @@ function bossOnSkill(p) { // 스킬 발동 순간: 기믹 대응 스킬 자동 �
   p.mpAcc = 0;
   if (c && c.caster === p) {
     const pick = (arr, key) => { const s = arr.find((x) => x.key === key); if (s) c.sk = s; };
-    if (B.gaze && c.kind === 'cmj') { pick(CM_SKILLS, 'time'); bossPop('자동 락온: 시간 팽창 → 선생님의 시선 지연', '#3cf0ff', 140, 40); }
+    if (B.gaze && c.kind === 'cmj') { pick(CM_SKILLS, 'time'); bossPop('자동 락온: 시간 팽창 → 주심의 시선 지연', '#3cf0ff', 140, 40); }
     if (B.gaze && c.kind === 'gm') { pick(GM_SKILLS, 'flash'); bossPop('자동 락온: 두피 반사 빔 → 시야 차단', '#ffe14a', 140, 40); }
-    if (B.desks.some((d) => d.land) && c.kind === 'jjh') { pick(JJ_SKILLS, 'chivalry'); bossPop('자동 락온: 뚝배기 파쇄 → 책상 박살', '#ff8a6a', 140, 40); }
+    if (B.desks.some((d) => d.land) && c.kind === 'jjh') { pick(JJ_SKILLS, 'chivalry'); bossPop('자동 락온: 뚝배기 파쇄 → 심판대 박살', '#ff8a6a', 140, 40); }
     bossAutoPick(c);
     const key = bossSkillKey(c);
     if (BOSS_TRUE.includes(key)) { B.cutT = 14; bossSfx('duck'); }
@@ -9487,10 +9483,10 @@ function bossSkillHit(c) { // 스킬 연출이 끝남 → 보스 피해
   if (!B || i < 0 || B.clearing) return;
   const key = bossSkillKey(c); let elem = SKILL_ELEM[key] || autoElem(p);
   if (key === 'wh:line' && B.sh > 0 && WEAK[B.shElem] === 'cyber') elem = 'cyber'; // 선 긋기 = 규율·전뇌 융합 (쉴드 약점 쪽으로)
-  if (c.banned) { // 소지품 검사: 압수된 속성 스킬
+  if (c.banned) { // 장비 검사: 압수된 속성 스킬
     B.partyHp = Math.max(0, B.partyHp - (D.pen >= 99 ? 99 : 1)); B.rage += 10;
     bossPop(`🚫 압수! ${ELEM[elem].name} 스킬은 금지 → 효과 없음 + 파티 HP -1`, '#ff5a5a', 100, 50);
-    if (B.partyHp <= 0) bossEnd(false, '소지품 검사 적발');
+    if (B.partyHp <= 0) bossEnd(false, '장비 검사 적발');
     return;
   }
   bossSkillCounter(c, key, elem, i);
@@ -9504,7 +9500,7 @@ function bossSkillHit(c) { // 스킬 연출이 끝남 → 보스 피해
     popups.push({ text: '👑 HEAD! 수확 처형', x: players[1].x, y: hitTop(players[1]) - 6, t: 30, color: '#ffb040' }); } // 쉴드 300% + 머리 트루
   else if (key === 'yean:pull') { bossDamage(D.dmg * 6, { elem, src: i, ignore: true }); B.brk -= 14; popups.push({ text: '👑 HEAD! 처형 스파이크', x: players[1].x, y: hitTop(players[1]) - 6, t: 30, color: '#ff5060' }); } // 머리 강제 판정 150% (쉴드 무시)
   else { bossDamage(D.dmg * 4, { elem, src: i }); B.brk -= 10; }
-  if (key === 'jjh:chivalry' && B.desks.length) { B.desks.forEach((d) => { d.life = 0; d.smash = true; }); bossDamage(D.dmg * 2, { elem: 'phys', src: i, quiet: true }); bossPop('책상 완파! 파편이 보스에게', '#ff8a6a', 120, 40); B.stats.clutch[i]++; }
+  if (key === 'jjh:chivalry' && B.desks.length) { B.desks.forEach((d) => { d.life = 0; d.smash = true; }); bossDamage(D.dmg * 2, { elem: 'phys', src: i, quiet: true }); bossPop('심판대 완파! 파편이 보스에게', '#ff8a6a', 120, 40); B.stats.clutch[i]++; }
   if ((key === 'cmj:time' || key === 'gm:flash') && B.gaze) B.stats.clutch[i]++;
 }
 
@@ -9611,7 +9607,7 @@ function bar(x, y, w, h, k, c1, c2, bg = 'rgba(0,0,0,.55)') {
   ctx.fillStyle = g; ctx.fillRect(x, y, w * Math.max(0, Math.min(1, k)), h);
   ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 0.7; ctx.strokeRect(x + 0.35, y + 0.35, w - 0.7, h - 0.7);
 }
-// 경기장 (선수 뒤): 책상 경고, 화염 지대
+// 경기장 (선수 뒤): 심판대 경고, 화염 지대
 function drawBossWorld() {
   const B = BOSS; if (!B) return;
   drawBossP23World();
@@ -9630,13 +9626,13 @@ function drawBossWorld() {
     }
     const y = d.y, a = Math.min(1, d.life / 25);
     ctx.save(); ctx.globalAlpha = a; ctx.translate(d.x, y);
-    if (d.kind === 'desk') { // 나무 책상
+    if (d.kind === 'desk') { // 나무 심판대
       ctx.fillStyle = '#5a3a1a'; ctx.fillRect(-18, -26, 4, 26); ctx.fillRect(14, -26, 4, 26);
       ctx.fillStyle = '#a8743a'; ctx.fillRect(-21, -30, 42, 6); ctx.fillStyle = '#c99050'; ctx.fillRect(-21, -30, 42, 2);
       ctx.fillStyle = '#7a5226'; ctx.fillRect(-16, -24, 32, 8);
-    } else { // 거대 출석부
+    } else { // 거대 규정집
       ctx.fillStyle = '#1f5a3a'; ctx.fillRect(-16, -34, 32, 34); ctx.fillStyle = '#f2ead2'; ctx.fillRect(13, -32, 3, 30);
-      ctx.fillStyle = '#ffd23f'; ctx.fillRect(-12, -26, 20, 9); text('출석부', -2, -19, 6, '#1f3a2a');
+      ctx.fillStyle = '#ffd23f'; ctx.fillRect(-12, -26, 20, 9); text('규정집', -2, -19, 6, '#1f3a2a');
     }
     ctx.restore();
   }
@@ -9664,7 +9660,7 @@ function drawBossWorldTop() {
     text(`GROGGY ${Math.ceil(B.groggyT / 25)}s`, b.x, top - 24, 10, '#ffe14a');
   }
   if (B.rageArmed) { ctx.fillStyle = `rgba(255,30,50,${0.15 + 0.1 * Math.sin(t * 0.6)})`; ctx.beginPath(); ctx.ellipse(b.x, (top + b.y) / 2, 64, 90, 0, 0, 7); ctx.fill(); }
-  if (B.gaze && B.gaze.ph === 'count') { const k = Math.min(1, B.gaze.t / B.gaze.dur); bar(b.x - 40, top - 40, 80, 6, k, '#ff8a3a', '#ff3048'); text('선생님의 시선 캐스팅', b.x, top - 44, 7, '#ffd0c0'); }
+  if (B.gaze && B.gaze.ph === 'count') { const k = Math.min(1, B.gaze.t / B.gaze.dur); bar(b.x - 40, top - 40, 80, 6, k, '#ff8a3a', '#ff3048'); text('주심의 시선 캐스팅', b.x, top - 44, 7, '#ffd0c0'); }
   for (const q of B.bolts || []) { // 낙뢰
     ctx.save(); ctx.strokeStyle = `rgba(255,240,120,${q.t / 14})`; ctx.lineWidth = 3; ctx.shadowColor = '#fff6a0'; ctx.shadowBlur = 12;
     ctx.beginPath(); let x = q.x + (Math.random() - 0.5) * 20; ctx.moveTo(x, 0); for (let y = 20; y <= q.y; y += 20) { x = q.x + (Math.random() - 0.5) * 18; ctx.lineTo(x, y); } ctx.stroke(); ctx.restore();
@@ -9716,7 +9712,7 @@ function drawBossHUD() {
     text(B.groggyT > 0 ? `그로기! 모든 타격 트루 데미지 x3 (${Math.ceil(B.groggyT / 25)}초)` : `쉴드 파괴됨 · 재생까지 ${Math.ceil(B.shRegenT / 25)}초`, GW / 2, 37, 6, '#ffe14a');
   }
   const gx = [40, 161, 282];
-  [['🔴 통제도', B.rage, '#ff3048', '#8a0c18'], ['🟡 교칙 준수율', B.rallyG, '#ffd23f', '#b8860b'], ['🔵 브레이크', B.brk, '#5aa8ff', '#1f4a8a']].forEach(([n, v, c1, c2], i) => {
+  [['🔴 통제도', B.rage, '#ff3048', '#8a0c18'], ['🟡 페어플레이', B.rallyG, '#ffd23f', '#b8860b'], ['🔵 브레이크', B.brk, '#5aa8ff', '#1f4a8a']].forEach(([n, v, c1, c2], i) => {
     bar(gx[i], 46, 110, 4, v / 100, c1, c2); text(n, gx[i], 44, 5.5, '#ddd', 'left'); text(Math.round(v) + '%', gx[i] + 110, 44, 5.5, '#ddd', 'right');
   });
   // ── 가운데: 랠리 · 콤보 ──
@@ -9769,7 +9765,7 @@ function drawBossHUD() {
     const k = Math.min(1, timer / 12);
     ctx.fillStyle = `rgba(255,255,255,${Math.max(0, 0.8 - timer * 0.05)})`; ctx.fillRect(0, 0, GW, GH);
     ctx.save(); ctx.shadowColor = '#ff2a6a'; ctx.shadowBlur = 20; text('BOSS DEFEATED', GW / 2, 140, 34 * (0.6 + 0.4 * k), '#ffffff'); ctx.restore();
-    if (timer > 30) text('"졸업… 축하…한다…"', GW / 2, 170, 10, '#ff9ab8');
+    if (timer > 30) text('"오심… 이었다…"', GW / 2, 170, 10, '#ff9ab8');
   }
   if (state === 'bossPhase') drawBossPhaseCard();
 }
@@ -9784,7 +9780,7 @@ function drawBossIntro() { // 보스 등장 (startMsg)
   text(BKI().name, gl, 18, 30 * k, '#ffffff');
   ctx.restore();
   if (t > 18) text('The Absolute Chairman', GW / 2, 158, 9, '#ff9ab8');
-  if (t > 28) text(`PHASE 1 / 3 — 훈화 말씀의 압박 · ${D.name} (${D.en})`, GW / 2, 180, 10, D.col);
+  if (t > 28) text(`PHASE 1 / 3 — 휘슬의 압박 · ${D.name} (${D.en})`, GW / 2, 180, 10, D.col);
   if (t > 38) text('규율 쉴드는 🔥화염에 약해! 리시브 → 토스 → 스파이크 3단 연계로 큰 피해', GW / 2, 198, 7, '#ffffff');
 }
 function drawBossResult() { // 결과 + 클리어 인증서
@@ -9886,7 +9882,7 @@ function drawBossMenu() {
     text(MOBILE.on ? '◀ ▶ 눌러서 보스 바꾸기' : '←→ (D/G) 보스 바꾸기 · ↑↓ 난이도', 160, 270, 7, '#ffd0e0');
     text(`보스 HP ${fmtN(L.hp)} · 쉴드 ${fmtN(L.sh)} · 공격력 x${L.atk}`, 160, 234, 7, '#ffffff');
     text(L.pen >= 99 ? '실점 1번 = 즉시 게임 오버 (원샷 필살)' : L.noHeal ? `파티 HP ${L.partyHp} · 실점하면 보스 HP 5% 회복 · ${BKI().exName} 전멸기` : `파티 HP ${L.partyHp} · 실점하면 HP -${L.pen} · 그로기 ${L.groggy / 25}초`, 160, 246, 7, '#ffd0e0');
-    text((bossKind ? ['패턴 1개씩 · 예고가 길어', '패턴 2개 동시 · 레이저·낙하물', '패턴 3개 · 조작 방해 · 감옥', '고트 패턴 30종 전부 · 전멸기 · 5% 클리어'] : ['패턴이 하나씩 · 예고가 길어', '이중 교칙: 패턴 콤보', '학칙 흑화: 좌우 반전 · 약점 압수', '절대 통제: 전멸기 · 폭탄 협동 · 3초 속성'])[bossDiff], 160, 258, 7, L.col);
+    text((bossKind ? ['패턴 1개씩 · 예고가 길어', '패턴 2개 동시 · 레이저·낙하물', '패턴 3개 · 조작 방해 · 감옥', '고트 패턴 30종 전부 · 전멸기 · 5% 클리어'] : ['패턴이 하나씩 · 예고가 길어', '이중 판정: 패턴 콤보', '판정 폭주: 좌우 반전 · 약점 압수', '절대 판정: 전멸기 · 폭탄 협동 · 3초 속성'])[bossDiff], 160, 258, 7, L.col);
   }
   text(MOBILE.on ? '터치로 고르기 · ⏏ = 뒤로' : '↑↓(R/F) 고르기 · Z/Enter 선택 · Esc 뒤로 · 클릭도 돼', GW / 2, 284, 9, '#aab4c8');
 }
@@ -10036,16 +10032,16 @@ function boss308Ready() { const B = BOSS; return !!(B && B.phase === 3 && !(B.or
 
 // =====================================================================
 // ===== 보스전 페이즈 2 · 3 (v7.1) =====
-// 페이즈 2 '학생주임의 폭주': 전뇌 쉴드 → HP 50%에 화염 쉴드, 소지품 검사, 선도부 넷 블록, 소음 측정기 카운터, 벌점 폭탄, 굴절 마구, 체벌 집행
-// 페이즈 3 '멸망의 졸업식': 4색 원소 궤도성(무적) → 4속성 순환 쉴드, 타임루프 환영공, 역사적 재앙 강타, 무회전 굴절 서브, 벌점 100점 즉형 집행, 508호 즉사 기믹
+// 페이즈 2 '심판진 총출동': 전뇌 쉴드 → HP 50%에 화염 쉴드, 장비 검사, 선심단 넷 블록, 소음 측정기 카운터, 옐로카드 폭탄, 굴절 마구, 페널티 집행
+// 페이즈 3 '멸망의 결승전': 4색 원소 궤도성(무적) → 4속성 순환 쉴드, 타임루프 환영공, 역사적 재앙 강타, 무회전 굴절 서브, 몰수패 선언, 508호 즉사 기믹
 // =====================================================================
 const BOSS_PHASE = [null,
-  { name: '훈화 말씀의 압박', sub: '입문 & 기믹 적응', col: '#ffd23f' },
-  { name: '학생주임의 폭주', sub: '광폭화 & 잡몹 소환', col: '#3cf0ff' },
-  { name: '멸망의 졸업식', sub: '최종 전멸기 & 타임어택', col: '#ff2a6a' }];
+  { name: '휘슬의 압박', sub: '입문 & 기믹 적응', col: '#ffd23f' },
+  { name: '심판진 총출동', sub: '광폭화 & 잡몹 소환', col: '#3cf0ff' },
+  { name: '멸망의 결승전', sub: '최종 전멸기 & 타임어택', col: '#ff2a6a' }];
 const ORB_ORDER = ['order', 'cyber', 'phys', 'pyro']; // 4색 원소 구체 파괴 순서 (각각 약점 속성으로)
 const ELEM_KEYS = ['cyber', 'pyro', 'order', 'phys'];
-const CAST_INFO = { mute: ['소음 측정기 160dB — 음소거!', '#78c8ff'], punish: ['체벌 집행', '#ff5a5a'], illusion: ['타임루프 시공간 균열', '#c8a0ff'], disaster: ['역사적 재앙 강타', '#ff8a3a'] };
+const CAST_INFO = { mute: ['소음 측정기 160dB — 음소거!', '#78c8ff'], punish: ['페널티 집행', '#ff5a5a'], illusion: ['타임루프 시공간 균열', '#c8a0ff'], disaster: ['역사적 재앙 강타', '#ff8a3a'] };
 const SKILL_ARR = () => ({ cmj: CM_SKILLS, history: HEROES, math: MATH_SKILLS, kim: KIM_SKILLS, yean: YA_SKILLS, rina: RN_SKILLS, jmw: JM_SKILLS, gm: GM_SKILLS, jjh: JJ_SKILLS, wh: WH_SKILLS, ljh: LJ_SKILLS, bk: BK_SKILLS, cjh: CJ_SKILLS, kdh: KD_SKILLS, lsj: LS_SKILLS });
 
 function bossNextPhase() { // 다음 페이즈 시작
@@ -10094,8 +10090,8 @@ function bossCastDone(k) {
     const pen = D.pen >= 99 ? 99 : Math.max(1, D.pen);
     B.partyHp = Math.max(0, B.partyHp - pen); B.rage += 10; shake = 22; hitStop = 8; bossSfx('drop'); bossSfx('thud');
     bossParty().forEach((p) => { p.freezeT = Math.max(p.freezeT || 0, 30); B.bolts = (B.bolts || []).concat({ x: p.x, y: p.y, t: 14 }); });
-    bossPop(`체벌 집행!! 코트 전체 물리 대미지 (파티 HP -${Math.min(pen, 99)})`, '#ff5a5a', 110, 50);
-    if (B.partyHp <= 0) bossEnd(false, '체벌 집행');
+    bossPop(`페널티 집행!! 코트 전체 물리 대미지 (파티 HP -${Math.min(pen, 99)})`, '#ff5a5a', 110, 50);
+    if (B.partyHp <= 0) bossEnd(false, '페널티 집행');
   } else if (k === 'disaster') { // 운석 + 낙뢰
     shake = 18; bossSfx('drop'); bossSfx('zap');
     for (const x of B.spots) {
@@ -10129,39 +10125,39 @@ function bossTickCommon(D, b) {
   for (const q of B.trail) q.t--; B.trail = B.trail.filter((q) => q.t > 0);
   if (B.burst && --B.burst.t <= 0) B.burst = null;
 }
-function bossTickP2(D, b) { // 페이즈 2: 학생주임의 폭주
+function bossTickP2(D, b) { // 페이즈 2: 심판진 총출동
   const B = BOSS;
   if (!B.shSwitched && B.hp <= B.hpMax * 0.5) { // 체력 50% → 화염 쉴드로 실시간 전환
     B.shSwitched = true; B.shElem = 'pyro'; B.sh = B.shMax; B.shRegenT = 0;
     bossPop('⚡전뇌 → 🔥화염 쉴드 전환! 이제 ⚡전뇌 속성에 약해', '#ff6a2a', 112, 60); bossSfx('glass');
   }
-  // 2-1 소지품 검사: 속성 하나 압수
-  if (B.ban) { if (--B.ban.t <= 0) { B.ban = null; B.banNext = D.ban; bossPop('소지품 검사 끝 (압수 해제)', '#9fe6b8', 120, 30); } }
+  // 2-1 장비 검사: 속성 하나 압수
+  if (B.ban) { if (--B.ban.t <= 0) { B.ban = null; B.banNext = D.ban; bossPop('장비 검사 끝 (압수 해제)', '#9fe6b8', 120, 30); } }
   else if (--B.banNext <= 0) {
     const e = ELEM_KEYS[Math.floor(Math.random() * 4)]; B.ban = { e, t: 25 * 20 };
-    bossSay('ban'); bossSfx('look'); bossPop(`🚫 소지품 검사! ${ELEM[e].ic}${ELEM[e].name} 속성 스킬 압수 (20초)`, '#ff8a8a', 112, 60);
+    bossSay('ban'); bossSfx('look'); bossPop(`🚫 장비 검사! ${ELEM[e].ic}${ELEM[e].name} 속성 스킬 압수 (20초)`, '#ff8a8a', 112, 60);
   }
-  // 2-2 선도부 2인 삼각 넷 블록 (체력 60%, 30%)
+  // 2-2 선심단 2인 삼각 넷 블록 (체력 60%, 30%)
   if (B.mobWave < 1 && B.hp <= B.hpMax * 0.6) bossMobs();
   if (B.mobWave < 2 && B.hp <= B.hpMax * 0.3) { bossMobs(); B.punishNext = 50; }
   if (B.mobs.length) {
-    if (--B.curtainT <= 0) { B.mobs = []; bossPop('선도부가 돌아갔다', '#9fe6b8', 120, 30); }
+    if (--B.curtainT <= 0) { B.mobs = []; bossPop('선심단이 돌아갔다', '#9fe6b8', 120, 30); }
     else if (ball.vx > 0 && !ball.byBoss && ball.power && !(ball.pierce > 0) && !ball.unblockable && ball.x > NET_X - 6 && ball.x < NET_X + 34 && ball.y < NET_TOP + 8 && !(B.reflT > 0)) {
       ball.vx = -Math.abs(ball.vx) * 0.6; ball.vy = Math.min(ball.vy, -4); ball.power = false; B.fx = null; B.reflT = 12;
       const m = B.mobs.find((q) => q.hp > 0); if (m) { m.hp--; m.hurt = 8; }
       B.mobs = B.mobs.filter((q) => q.hp > 0);
       heavy(NET_X + 10, ball.y, 1.2); bossSfx('zap');
-      bossPop(B.mobs.length ? '⚡ 선도부 넷 블록! 스파이크 반사' : '선도부 전멸! 장막 해제', B.mobs.length ? '#3cf0ff' : '#7dff9a', 104, 26);
+      bossPop(B.mobs.length ? '⚡ 선심단 넷 블록! 스파이크 반사' : '선심단 전멸! 장막 해제', B.mobs.length ? '#3cf0ff' : '#7dff9a', 104, 26);
     }
   }
   if (B.reflT > 0) B.reflT--;
-  // 체벌 집행 (체력 30% 이하, 그 뒤로 30초마다)
+  // 페널티 집행 (체력 30% 이하, 그 뒤로 30초마다)
   if (B.punishNext > 0 && --B.punishNext === 0) { if (!B.cast) { bossCast('punish'); B.punishNext = 750; } else B.punishNext = 25; }
-  // 벌점 폭탄 투하 → 연소 지대
+  // 옐로카드 폭탄 투하 → 연소 지대
   if (--B.bombNext <= 0) {
     B.bombNext = D.bomb;
     for (let k = 0; k < 5; k++) B.bombs.push({ x: 40 + k * 30 + Math.random() * 16, y: -30 - k * 18, vy: 0, warn: 25 + k * 4 });
-    bossPop('💣 벌점 폭탄 투하!', '#ff8a3a', 120, 30);
+    bossPop('💣 옐로카드 폭탄 투하!', '#ff8a3a', 120, 30);
   }
   bossBombs();
   // 3연속 굴절 마구 예고
@@ -10171,7 +10167,7 @@ function bossMobs() {
   const B = BOSS; B.mobWave++;
   B.mobs = [{ x: 234, hp: 3 }, { x: 254, hp: 3 }]; B.curtainT = 25 * 20;
   bossSay('mob'); bossSfx('zap');
-  bossPop('👮 선도부 2인 삼각 넷 블록! 일반 스파이크는 반사됨', '#3cf0ff', 112, 60);
+  bossPop('🚩 선심 2인 삼각 넷 블록! 일반 스파이크는 반사됨', '#3cf0ff', 112, 60);
 }
 function bossBombs() {
   const B = BOSS;
@@ -10185,7 +10181,7 @@ function bossBombs() {
   for (const z of B.zones) { z.t--; for (const p of bossParty()) if (Math.abs(p.x - z.x) < 15 && p.y > P_GROUND_Y - 10) { p.slowT = Math.max(p.slowT || 0, 6); p.slowK = 0.5; } }
   B.zones = B.zones.filter((z) => z.t > 0);
 }
-function bossTickP3(D, b) { // 페이즈 3: 멸망의 졸업식
+function bossTickP3(D, b) { // 페이즈 3: 멸망의 결승전
   const B = BOSS;
   if (B.orbs) { if (++B.orbT === 25 * 20) bossPop('구체에 금이 갔다! 이제 아무 속성으로나 부술 수 있어', '#ffffff', 120, 40); }
   else {
@@ -10193,12 +10189,12 @@ function bossTickP3(D, b) { // 페이즈 3: 멸망의 졸업식
       B.rotT = D.rot; const old = B.shElem; do { B.shElem = ELEM_KEYS[Math.floor(Math.random() * 4)]; } while (B.shElem === old);
       bossPop(`쉴드 속성 변경 → ${ELEM[B.shElem].ic}${ELEM[B.shElem].name} (약점 ${ELEM[WEAK[B.shElem]].ic}${ELEM[WEAK[B.shElem]].name})`, ELEM[B.shElem].col, 112, 40); bossSfx('look');
     }
-    if (!B.execDone && B.hp <= B.hpMax * 0.15) { // 3-3 벌점 100점 즉형 집행
+    if (!B.execDone && B.hp <= B.hpMax * 0.15) { // 3-3 몰수패 선언
       B.execDone = true; B.exec = { t: D.p3, max: D.p3, ext: false }; B.cast = null; B.spots = [];
       bossSay('exec'); bossSfx('drop'); shake = 16;
-      bossPop(`⚖ 벌점 100점 즉형 집행! ${D.p3 / 25}초 안에 쓰러뜨려!`, '#ff2a6a', 110, 70);
+      bossPop(`🟥 경고 100장 몰수패 선언! ${D.p3 / 25}초 안에 쓰러뜨려!`, '#ff2a6a', 110, 70);
     }
-    if (B.exec) { if (--B.exec.t <= 0) { B.exec = null; B.pages = 1; bossEnd(false, '벌점 100점 즉형 집행 (반성문 100장)'); return; } }
+    if (B.exec) { if (--B.exec.t <= 0) { B.exec = null; B.pages = 1; bossEnd(false, '경고 100장 몰수패'); return; } }
     else {
       if (--B.illuNext <= 0) { B.illuNext = D.illu; if (!B.cast && !B.illuArmed) bossCast('illusion'); }
       if (--B.disNext <= 0) { B.disNext = D.dis; if (!B.cast) bossCast('disaster'); }
@@ -10229,9 +10225,9 @@ function bossAutoPick(c) {
     [!!(B.cast && B.cast.k === 'disaster'), 'history', 'gyebaek', '계백 결사 방어 → 재앙 강타 막기'], [!!(B.cast && B.cast.k === 'disaster'), 'math', 'euler', '오일러 → 패턴 강제 취소'],
     [fakesOn, 'history', 'hangul', '세종 해례본 → 진짜 공 낙하지점 표시'], [fakesOn, 'rina', 'math', '미적분 3D 굴절 → 환영공 모아 버림'],
     [!!(B.cast && B.cast.k === 'mute'), 'yean', 'scream', '160dB 샤우팅 → 맞불 음파 폭발'],
-    [!!(B.cast && B.cast.k === 'punish'), 'wh', 'evict', '벌점 25점 집행 → 체벌 집행 디스펠'], [!!(B.cast && B.cast.k === 'punish'), 'rina', 'soc', '헌법 제1조 → 체벌 집행 디스펠'],
+    [!!(B.cast && B.cast.k === 'punish'), 'wh', 'evict', '벌점 25점 집행 → 페널티 집행 디스펠'], [!!(B.cast && B.cast.k === 'punish'), 'rina', 'soc', '헌법 제1조 → 페널티 집행 디스펠'],
     [!!B.ban, 'rina', 'soc', '헌법 제1조 → 압수령 무효화'], [!!B.ban, 'kim', 'vote', '탄핵 소추 → 검사 권한 봉인'],
-    [B.mobs.length > 0, 'math', 'rail', '미적분 레일건 → 선도부·장막 관통'], [B.mobs.length > 0, 'wh', 'clap', '더블 클랩 → 방어막 무시'], [B.mobs.length > 0, 'jmw', 'meteor', '운석 강타 → 잡몹 일괄 제거'],
+    [B.mobs.length > 0, 'math', 'rail', '미적분 레일건 → 선심단·장막 관통'], [B.mobs.length > 0, 'wh', 'clap', '더블 클랩 → 방어막 무시'], [B.mobs.length > 0, 'jmw', 'meteor', '운석 강타 → 잡몹 일괄 제거'],
     [B.zones.length > 0, 'wh', 'clap', '더블 클랩 → 연소 지대 관통'],
     [!!(B.bendArmed || ball.bend), 'math', 'blade', '행렬 대검 → 굴절 마구 방어'],
     [B.desks.length > 0 || B.mobs.length > 0 || B.bombs.length > 0 || fakesOn, 'yean', 'push', '신라천정 → 장해물·잡몹·투사체 전부 반사'],
@@ -10249,7 +10245,7 @@ function bossAutoPick(c) {
     bossPop('자동 락온: ' + msg, '#ffe14a', 140, 44);
     break;
   }
-  // 소지품 검사: 압수된 속성이면 다른 스킬로 바꿔 봄 (대응 스킬은 그대로)
+  // 장비 검사: 압수된 속성이면 다른 스킬로 바꿔 봄 (대응 스킬은 그대로)
   if (B.ban) {
     const key = bossSkillKey(c), banCounter = key === 'rina:soc' || key === 'kim:vote';
     if (!banCounter && SKILL_ELEM[key] === B.ban.e) {
@@ -10268,9 +10264,9 @@ function bossSkillCounter(c, key, elem, i) {
     bossPop('선 긋기! 7초간 보스 코트 ×1.7 · 히트박스 2배 · 선 넘으면 자해', '#ff4060', 104, 50); clutch();
   }
   if (B.ban && (key === 'rina:soc' || key === 'kim:vote')) { B.ban = null; B.banNext = key === 'kim:vote' ? Math.max(D.ban, 250) + 250 : D.ban; bossPop(key === 'kim:vote' ? '탄핵 소추! 검사 권한 봉인' : '헌법 제1조! 압수령 무효', '#ffd23f', 104, 44); clutch(); B.rallyG += 15; }
-  if (B.mobs.length && ['math:rail', 'wh:clap', 'jmw:meteor', 'party:party'].includes(key)) { B.mobs = []; bossDamage(D.dmg * 2, { elem, src: i, quiet: true }); bossPop('선도부 제거! 장막 해제', '#7dff9a', 104, 44); clutch(); B.rallyG += 15; }
+  if (B.mobs.length && ['math:rail', 'wh:clap', 'jmw:meteor', 'party:party'].includes(key)) { B.mobs = []; bossDamage(D.dmg * 2, { elem, src: i, quiet: true }); bossPop('선심단 제거! 장막 해제', '#7dff9a', 104, 44); clutch(); B.rallyG += 15; }
   if (B.cast && B.cast.k === 'mute' && c.kind === 'yean') { B.cast = null; bossDamage(D.dmg * 12, { elem: 'phys', src: i }); bossPop('맞불 샤우팅! 보스 코트에 음파 대폭발', '#78c8ff', 104, 50); shake = 16; clutch(2); }
-  if (B.cast && B.cast.k === 'punish' && (key === 'wh:evict' || key === 'rina:soc')) { B.cast = null; bossPop('체벌 집행 디스펠!', '#7dff9a', 104, 44); clutch(2); B.rallyG += 15; }
+  if (B.cast && B.cast.k === 'punish' && (key === 'wh:evict' || key === 'rina:soc')) { B.cast = null; bossPop('페널티 집행 디스펠!', '#7dff9a', 104, 44); clutch(2); B.rallyG += 15; }
   if (B.zones.length && key === 'wh:clap') { B.zones = []; B.bombs = []; bossPop('더블 클랩! 연소 지대 소멸', '#7dff9a', 116, 36); }
   if (key === 'math:blade' && (B.bendArmed || ball.bend)) { B.bendArmed = 0; ball.bend = null; bossPop('행렬 대검! 굴절 마구 봉쇄', '#7dff9a', 116, 36); clutch(); }
   if (key === 'history:hangul' || key === 'rina:math') {
@@ -10320,17 +10316,17 @@ function bossSkillCounter(c, key, elem, i) {
 }
 
 // ----- 페이즈 2·3 그리기 -----
-function drawStudent(x, y, t, hurt, flip) { // 선도부원 (코드로 그린 일반 학생)
+function drawStudent(x, y, t, hurt, flip) { // 선심 (깃발 든 심판 부하)
   ctx.save(); ctx.translate(x, y); if (flip) ctx.scale(-1, 1);
   if (hurt > 0) ctx.filter = 'brightness(2)';
   ctx.fillStyle = '#1a1d33'; ctx.fillRect(-5, -14, 4, 14); ctx.fillRect(1, -14, 4, 14);
-  ctx.fillStyle = '#23305a'; ctx.fillRect(-8, -36, 16, 23);
-  ctx.fillStyle = '#f2f2f7'; ctx.fillRect(-2, -36, 4, 6);
-  ctx.fillStyle = '#c8102e'; ctx.fillRect(-10, -32, 4, 6); ctx.fillStyle = '#ffd23f'; ctx.fillRect(-10, -30, 4, 1); // 완장
+  ctx.fillStyle = '#f2f2f7'; ctx.fillRect(-8, -36, 16, 23);
+  ctx.fillStyle = '#16121e'; for (let i = -7; i < 8; i += 4) ctx.fillRect(i, -36, 2, 23); // 흑백 줄무늬
+  ctx.fillStyle = '#8a6a3a'; ctx.fillRect(-12, -46, 1, 16); ctx.fillStyle = '#ff3a2a'; ctx.fillRect(-19, -46 + Math.sin(t * 0.4), 7, 5); ctx.fillStyle = '#ffd23f'; ctx.fillRect(-19, -44 + Math.sin(t * 0.4), 7, 1); // 깃발
   ctx.fillStyle = '#e2b48e'; ctx.beginPath(); ctx.arc(0, -42, 7, 0, 7); ctx.fill();
   ctx.fillStyle = '#111'; ctx.fillRect(-7, -50, 14, 5); ctx.fillRect(4, -48, 3, 5);
   ctx.fillRect(-4, -43, 2, 2); ctx.fillRect(2, -43, 2, 2);
-  ctx.fillStyle = '#23305a'; ctx.fillRect(-11, -26 + Math.sin(t * 0.3) * 1, 22, 4); // 팔짱
+  ctx.fillStyle = '#e2b48e'; ctx.fillRect(-11, -26 + Math.sin(t * 0.3) * 1, 22, 4); // 팔짱
   ctx.restore();
 }
 function drawBossP23World() { // 선수 뒤: 연소 지대, 재앙 표시
@@ -10350,10 +10346,10 @@ function drawBossP23World() { // 선수 뒤: 연소 지대, 재앙 표시
   for (const m of B.bombs) {
     if (m.warn > 0) { ctx.fillStyle = `rgba(255,60,40,${0.3 + 0.3 * Math.sin(m.warn)})`; ctx.beginPath(); ctx.ellipse(m.x, 275, 14, 3, 0, 0, 7); ctx.fill(); continue; }
     ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.arc(m.x, m.y, 8, 0, 7); ctx.fill();
-    ctx.fillStyle = '#c8102e'; ctx.fillRect(m.x - 7, m.y - 3, 14, 6); text('벌점', m.x, m.y + 2.5, 5, '#fff');
+    ctx.fillStyle = '#ffd23f'; ctx.fillRect(m.x - 7, m.y - 3, 14, 6); text('경고', m.x, m.y + 2.5, 5, '#1a1420');
   }
 }
-function drawBossP23Top() { // 선수 앞: 선도부·장막, 원소 구체, 굴절 잔상, 음파공
+function drawBossP23Top() { // 선수 앞: 선심단·장막, 원소 구체, 굴절 잔상, 음파공
   const B = BOSS; if (!B) return;
   const b = players[1], t = b.anim;
   if (B.mobs.length) {
@@ -10365,7 +10361,7 @@ function drawBossP23Top() { // 선수 앞: 선도부·장막, 원소 구체, 굴
     for (let k = 0; k < 3; k++) { let x = NET_X + 4 + k * 9; ctx.moveTo(x, NET_TOP - 110); for (let y = NET_TOP - 100; y <= NET_TOP; y += 12) { x = NET_X + 4 + k * 9 + (Math.random() - 0.5) * 8; ctx.lineTo(x, y); } }
     ctx.stroke(); ctx.restore();
     B.mobs.forEach((m) => drawStudent(m.x, 276, t, m.hurt = Math.max(0, (m.hurt || 0) - 1), true));
-    text(`선도부 넷 블록 ${Math.ceil(B.curtainT / 25)}s`, NET_X + 26, 226, 7, '#bff8ff');
+    text(`선심단 넷 블록 ${Math.ceil(B.curtainT / 25)}s`, NET_X + 26, 226, 7, '#bff8ff');
   }
   if (B.orbs) { // 4색 원소 궤도성
     const cx = b.x, cy = (hitTop(b) + b.y + 32) / 2;
@@ -10395,7 +10391,7 @@ function drawBossP23HUD() { // 화면 고정: 캐스팅 바, 압수, 소음계, 
   if (warn) text(warn, GW - 8, 74, 7, '#ffe14a', 'right');
   if (B.exec) { const s = (B.exec.t / 25).toFixed(1), on = Math.floor(now / 250) % 2;
     ctx.fillStyle = `rgba(120,0,20,${0.15 + 0.1 * on})`; ctx.fillRect(0, 53, GW, GH - 53);
-    text(`⚖ 벌점 100점 즉형 집행 ${s}초`, GW / 2, 124, 15, on ? '#ff2a6a' : '#ffffff');
+    text(`🟥 몰수패 선언까지 ${s}초`, GW / 2, 124, 15, on ? '#ff2a6a' : '#ffffff');
     text(B.exec.ext ? '(시간 팽창으로 2배 연장됨)' : '시간 안에 HP 0! 확정 스킬을 퍼부어 · 차명준 시간 팽창 = 타이머 2배', GW / 2, 138, 6.5, '#ffd0d8'); }
   if (boss308Ready() && is308() && Math.floor(now / 300) % 2) text('🚪 M = 508호의 마지막 점호 (즉사 기믹!)', GW / 2, 152, 10, '#ffd0e0');
 }
@@ -10415,7 +10411,7 @@ function drawBossPhaseCard() { // 페이즈 전환 연출
     ctx.restore();
     if (t > 80) text(nx.sub, GW / 2, 168, 10, nx.col);
     if (t > 92) text(B.phase === 1 ? '⚡전뇌 쉴드 (약점 ✊물리) → 체력 50%에 🔥화염 쉴드 (약점 ⚡전뇌)' : '무적! 4색 원소 구체를 ⚖→⚡→✊→🔥 순서로 부숴', GW / 2, 188, 7.5, '#ffffff');
-    if (t > 100) text(B.phase === 1 ? '소지품 검사 · 선도부 넷 블록 · 소음 측정기 · 벌점 폭탄 · 굴절 마구 · 체벌 집행' : '환영공 · 재앙 강타 · 굴절 서브 · 벌점 100점 즉형 집행 · 508호', GW / 2, 202, 6.5, '#ffd0e0');
+    if (t > 100) text(B.phase === 1 ? '장비 검사 · 선심단 넷 블록 · 소음 측정기 · 옐로카드 폭탄 · 굴절 마구 · 페널티 집행' : '환영공 · 재앙 강타 · 굴절 서브 · 몰수패 선언 · 508호', GW / 2, 202, 6.5, '#ffd0e0');
   }
 }
 // ----- BGM 페이즈 2: 하비 메탈 리프 + 다크 베이스 / 페이즈 3: 합창 + 서브 베이스 드롭 -----
@@ -11787,7 +11783,7 @@ const TICK_CARDS = [ // [이름, 정렬할 칸, 큰 값부터?, 값 보여 주�
   ['👹 보스전 고트 1위', 'b3', true, (u) => `${fmtN(u.b3)}점 · ${u.r3}`], ['👹 보스전 헬 1위', 'b2', true, (u) => `${fmtN(u.b2)}점 · ${u.r2}`],
   ['👹 보스전 하드 1위', 'b1', true, (u) => `${fmtN(u.b1)}점 · ${u.r1}`], ['👹 보스전 노멀 1위', 'b0', true, (u) => `${fmtN(u.b0)}점 · ${u.r0}`],
   ['⚔️ 개인전 1위 (온라인)', 'rp', true, (u) => { const t = tierOf(u.rp); return `${t[3]} ${t[0]} · ${u.rp}점`; }],
-  ['🪷 주지스님 고트 1위', 'k1b3', true, (u) => `${fmtN(u.k1b3)}점 · ${u.k1r3}`], ['💾 AI 교장 고트 1위', 'k2b3', true, (u) => `${fmtN(u.k2b3)}점 · ${u.k2r3}`],
+  ['🪷 주지스님 고트 1위', 'k1b3', true, (u) => `${fmtN(u.k1b3)}점 · ${u.k1r3}`], ['💾 배구봇 고트 1위', 'k2b3', true, (u) => `${fmtN(u.k2b3)}점 · ${u.k2r3}`],
   ['🏐 최다 승리', 'wins', true, (u) => `${u.wins}승 ${u.losses || 0}패`], ['⏱ 헬 최단 클리어', 'f2', false, (u) => mmss(u.f2)]];
 const TICK = { rows: [], t: 0, loading: false, err: '', act: Date.now() };
 // v8.3.1 방치 방지: 다른 탭을 보고 있거나 30분 넘게 아무것도 안 누르면 새로 안 불러옴 (서버 읽기 아끼기). 다시 누르면 바로 이어짐
@@ -11998,8 +11994,8 @@ function drawLsGloom() { // 선생님도 이제 한계다: 당한 사람 화면�
 }
 { const baseD = draw; draw = function () { baseD(); drawLsGloom(); }; }
 
-// ===== (v8.5) 보스전 버그 수정: 소지품 검사 중 '압수된 속성' 스킬 =====
-// 예전: 압수 속성 스킬을 쓰면 파티 HP -1 (고트·pen 99는 -99 = 바로 실패 '소지품 검사 적발'). AI 팀원이 자동으로 써도 똑같이 걸려서, 실점 없이 갑자기 실패함
+// ===== (v8.5) 보스전 버그 수정: 장비 검사 중 '압수된 속성' 스킬 =====
+// 예전: 압수 속성 스킬을 쓰면 파티 HP -1 (고트·pen 99는 -99 = 바로 실패 '장비 검사 적발'). AI 팀원이 자동으로 써도 똑같이 걸려서, 실점 없이 갑자기 실패함
 // 지금: AI 팀원은 압수 속성 스킬을 참음 (마나 1칸만 덜 참) / 사람도 파티 HP가 한 방에 끝나는 난이도(pen 99)에선 스킬이 안 나가고 경고만 (마나 그대로)
 { const baseOS = bossOnSkill; bossOnSkill = function (p) {
   baseOS(p);
@@ -12024,44 +12020,44 @@ const CJ_LX = new WeakMap(); // 지난번 그릴 때 x (움직이는지 보려�
 }; }
 
 // =====================================================================
-// ===== (v8.10) 보스전 난이도별 패턴 개편 — 마왕 이사장 =====
-// 노멀: 패턴이 겹치지 않게 하나씩 + 책상 예고 길게
-// 하드↑: '훈화 말씀' (시선 + 내 발밑 책상) · 2페이즈 라운드 첫 보스 공격이 S자로 휨
-// 헬↑: '학칙 뒤집기' 캐스팅 (사람만 좌우 반전 6초) · 소지품 검사가 1페이즈부터 + 지금 약점 속성을 압수 · 굴절 마구 1페이즈부터
-// 고트: 파티 HP 5 (실점 -1) · 실점하면 보스 HP 5% 회복 + 통제도 +25(총) · 통제도 MAX / 페이즈마다 HP 50%에 '자퇴 권고' 전멸기
-//       (8초 안에 결재 쉴드를 못 깨면 전멸, 깨면 2배 그로기) · '벌점 폭탄 공' (파티 2명 이상 터치하고 넘기면 보스에게 반사) · 쉴드 속성 3초마다
+// ===== (v8.10) 보스전 난이도별 패턴 개편 — 마왕 주심 =====
+// 노멀: 패턴이 겹치지 않게 하나씩 + 심판대 예고 길게
+// 하드↑: '휘슬 콤보' (시선 + 내 발밑 심판대) · 2페이즈 라운드 첫 보스 공격이 S자로 휨
+// 헬↑: '코트 체인지' 캐스팅 (사람만 좌우 반전 6초) · 장비 검사가 1페이즈부터 + 지금 약점 속성을 압수 · 굴절 마구 1페이즈부터
+// 고트: 파티 HP 5 (실점 -1) · 실점하면 보스 HP 5% 회복 + 통제도 +25(총) · 통제도 MAX / 페이즈마다 HP 50%에 '레드카드 퇴장' 전멸기
+//       (8초 안에 판정 쉴드를 못 깨면 전멸, 깨면 2배 그로기) · '옐로카드 폭탄 공' (파티 2명 이상 터치하고 넘기면 보스에게 반사) · 쉴드 속성 3초마다
 // 게임 결과를 바꾸는 건 전부 update 안에서만 (온라인 똑같이 계산하기 OK). 그림은 draw 감싸기
 // =====================================================================
 const BOSS_V810 = { // 난이도별 새 값 [노멀, 하드, 헬, 고트] (조정은 여기서)
-  deskWarnPlus: [20, 0, 0, 0],          // 책상 예고 추가 프레임 (노멀 1.8초 이상)
-  combo: [false, true, true, true],     // 훈화 말씀 (시선 + 책상)
+  deskWarnPlus: [20, 0, 0, 0],          // 심판대 예고 추가 프레임 (노멀 1.8초 이상)
+  combo: [false, true, true, true],     // 휘슬 콤보 (시선 + 심판대)
   sCurve: [false, true, true, true],    // 2페이즈 S자 서브
-  flip: [0, 0, 600, 500],               // 학칙 뒤집기 주기 (프레임, 0 = 없음)
+  flip: [0, 0, 600, 500],               // 코트 체인지 주기 (프레임, 0 = 없음)
   flipT: 150,                           // 뒤집기 6초
-  hellBan: [false, false, true, true],  // 소지품 검사 1페이즈부터 + 약점 압수
+  hellBan: [false, false, true, true],  // 장비 검사 1페이즈부터 + 약점 압수
   hellBend: [false, false, true, true], // 굴절 마구 1페이즈부터
-  ex: [false, false, false, true],      // 자퇴 권고 전멸기
-  exT: 200, exHp: 16,                   // 8초, 결재 쉴드 = 파티 기본 데미지(D.dmg) × 16 (시뮬: 강한 AI 파티 고트 승률 약 20%)
-  bombB: [0, 0, 0, 450],                // 벌점 폭탄 공 주기 (18초)
+  ex: [false, false, false, true],      // 레드카드 퇴장 전멸기
+  exT: 200, exHp: 16,                   // 8초, 판정 쉴드 = 파티 기본 데미지(D.dmg) × 16 (시뮬: 강한 AI 파티 고트 승률 약 20%)
+  bombB: [0, 0, 0, 450],                // 옐로카드 폭탄 공 주기 (18초)
   goatHeal: 0.05, goatRage: 10,         // 고트 실점: 보스 HP 5% 회복 + 통제도 +10 (기본 +15와 합쳐 +25)
 };
 let v810 = (k) => BOSS_V810[k][bossDiff];
-CAST_INFO.flip = ['학칙 뒤집기 — 좌우 반전!', '#ff7ae0'];
-BOSS_LINES.flip = ['학칙 개정! 오른쪽이 왼쪽이다.', '교칙 제7조, 좌우를 뒤집는다.'];
-BOSS_LINES.ex = ['자퇴 권고서에 결재하겠네.', '자네들은 이 학교와 맞지 않아.'];
-BOSS_LINES.bomb = ['벌점 폭탄이다. 받을 수 있으면 받아 봐.'];
-BOSS_LINES.combo = ['훈화 말씀이 있겠습니다. 움직이지 마라.'];
+CAST_INFO.flip = ['코트 체인지 — 좌우 반전!', '#ff7ae0'];
+BOSS_LINES.flip = ['코트 체인지! 오른쪽이 왼쪽이다.', '규정 제7조, 좌우를 뒤집는다.'];
+BOSS_LINES.ex = ['레드카드다. 전원 퇴장!', '자네들은 이 코트에 설 자격이 없다.'];
+BOSS_LINES.bomb = ['옐로카드 폭탄이다. 받을 수 있으면 받아 봐.'];
+BOSS_LINES.combo = ['삐이익-! 전원 그 자리에 멈춰라.'];
 
 function bossBusy() { // 노멀: 지금 패턴이 진행 중인가 (하나 끝나야 다음)
   const B = BOSS;
   return !!(B.gaze || B.cast || B.desks.some((d) => !d.land) || B.bombs.length || B.bendArmed || ball.bend || B.illuArmed || B.sonicArmed || B.ex || fakes.some((f) => f.boss));
 }
-function bossHellBanNew() { // 헬↑ 소지품 검사: 쉴드가 있으면 지금 약점 속성을 압수
+function bossHellBanNew() { // 헬↑ 장비 검사: 쉴드가 있으면 지금 약점 속성을 압수
   const B = BOSS, e = B.sh > 0 ? WEAK[B.shElem] : ELEM_KEYS[Math.floor(Math.random() * 4)];
   B.ban = { e, t: 25 * 20 };
-  bossSay('ban'); bossSfx('look'); bossPop(`🚫 소지품 검사! ${ELEM[e].ic}${ELEM[e].name} 속성 스킬 압수 (20초)`, '#ff8a8a', 112, 60);
+  bossSay('ban'); bossSfx('look'); bossPop(`🚫 장비 검사! ${ELEM[e].ic}${ELEM[e].name} 속성 스킬 압수 (20초)`, '#ff8a8a', 112, 60);
 }
-function bossExStart() { // 고트 전멸기 '자퇴 권고'
+function bossExStart() { // 고트 전멸기 '레드카드 퇴장'
   const B = BOSS, D = BOSS_DIFF[bossDiff];
   const exHp = D.dmg * BOSS_V810.exHp * ((bossDiff === 3 && BKI().goat && BKI().goat.exMul) || 1); // v9.0 보스 2·3 고트는 더 단단
   B.ex = { t: BOSS_V810.exT, max: BOSS_V810.exT, hp: exHp, hpMax: exHp };
@@ -12099,27 +12095,27 @@ function bossExBreak(src) {
   base(p, inp);
 }; }
 
-// 캐스팅: 학칙 뒤집기
+// 캐스팅: 코트 체인지
 { const base = bossCast; bossCast = function (k) {
   if (k !== 'flip') { base(k); return; }
   const B = BOSS; B.cast = { k, t: 0, dur: 25, name: CAST_INFO.flip[0] };
   bossSay('flip'); bossSfx('gaze'); shake = 6;
-  bossPop('⚠ 의사봉 쾅! 학칙 뒤집기 캐스팅 (1초)', CAST_INFO.flip[1], 120, 34);
+  bossPop('⚠ 휘슬 삐익! 코트 체인지 캐스팅 (1초)', CAST_INFO.flip[1], 120, 34);
 }; }
 { const base = bossCastDone; bossCastDone = function (k) {
   if (k !== 'flip') { base(k); return; }
   const B = BOSS; B.cast = null; B.rage += 5;
   bossParty().forEach((p) => (p.flipT = BOSS_V810.flipT));
   bossSfx('zap'); shake = 10;
-  bossPop(`⇄ 학칙 뒤집기! ${BOSS_V810.flipT / 25}초간 좌우 반대 (송리나·김민주 스킬로 해제)`, '#ff7ae0', 110, 50);
+  bossPop(`⇄ 코트 체인지! ${BOSS_V810.flipT / 25}초간 좌우 반대 (송리나·김민주 스킬로 해제)`, '#ff7ae0', 110, 50);
 }; }
 
-// 페이즈 1: 노멀 하나씩 · 하드 훈화 말씀 · 헬 소지품 검사·굴절 마구
+// 페이즈 1: 노멀 하나씩 · 하드 휘슬 콤보 · 헬 장비 검사·굴절 마구
 { const base = bossTickP1; bossTickP1 = function (D, b) {
   const B = BOSS, nd = B.desks.length, hadGaze = !!B.gaze;
   if (bossDiff === 0 && bossBusy()) { B.deskNext++; if (B.gazeArmed && !B.gaze) B.gazeNext++; }
   if (v810('hellBan')) {
-    if (B.ban) { if (--B.ban.t <= 0) { B.ban = null; B.banNext = D.ban; bossPop('소지품 검사 끝 (압수 해제)', '#9fe6b8', 120, 30); } }
+    if (B.ban) { if (--B.ban.t <= 0) { B.ban = null; B.banNext = D.ban; bossPop('장비 검사 끝 (압수 해제)', '#9fe6b8', 120, 30); } }
     else if (--B.banNext <= 0) bossHellBanNew();
   }
   if (v810('hellBend') && --B.bendNext <= 0) { B.bendNext = D.bend; if (!B.bendArmed) { B.bendArmed = 3; bossPop('⚠ 다음 보스 공격: 3연속 굴절 마구', '#3cf0ff', 120, 34); } }
@@ -12127,9 +12123,9 @@ function bossExBreak(src) {
   if (!BOSS || B.clearing) return;
   const add = BOSS_V810.deskWarnPlus[bossDiff];
   if (add) for (let k = nd; k < B.desks.length; k++) B.desks[k].warn += add;
-  if (v810('combo') && !hadGaze && B.gaze && B.gaze.ph === 'count') { // 훈화 말씀: 지금 서 있는 자리에 출석부가 떨어짐 → 그림자에서 나온 다음 '돌아보기' 전에 멈춰야 함
+  if (v810('combo') && !hadGaze && B.gaze && B.gaze.ph === 'count') { // 휘슬 콤보: 지금 서 있는 자리에 규정집이 떨어짐 → 그림자에서 나온 다음 '돌아보기' 전에 멈춰야 함
     bossParty().forEach((p) => B.desks.push({ x: Math.max(30, Math.min(NET_X - 26, p.x)), y: -40, warn: 36, vy: 0, life: 200, kind: 'book', land: false, combo: true }));
-    bossSay('combo'); bossPop('📢 훈화 말씀! 그림자에서 피한 다음, 돌아보기 전에 멈춰!', '#ffb36b', 112, 56);
+    bossSay('combo'); bossPop('📢 휘슬 콤보! 그림자에서 피한 다음, 돌아보기 전에 멈춰!', '#ffb36b', 112, 56);
   }
 }; }
 // 페이즈 2: 노멀 하나씩 · 헬 약점 압수
@@ -12157,7 +12153,7 @@ function bossExBreak(src) {
     if (B.ex && --B.ex.t <= 0) { B.ex = null; bossEnd(false, BKI().exName + ' (전멸기)'); return; }
   }
   if (v810('flip') && !B.exec && --B.flipNext <= 0) { if (!B.cast && !B.ex) { bossCast('flip'); B.flipNext = v810('flip'); } else B.flipNext = 25; }
-  if (v810('bombB') && --B.bombNext2 <= 0) { B.bombNext2 = v810('bombB'); if (!B.bombArmed) { B.bombArmed = true; bossSay('bomb'); bossPop('💣 다음 보스 공격 = 벌점 폭탄 공! 2명 이상 터치하고 넘겨', '#ff8a3a', 120, 50); } }
+  if (v810('bombB') && --B.bombNext2 <= 0) { B.bombNext2 = v810('bombB'); if (!B.bombArmed) { B.bombArmed = true; bossSay('bomb'); bossPop('💣 다음 보스 공격 = 옐로카드 폭탄 공! 2명 이상 터치하고 넘겨', '#ff8a3a', 120, 50); } }
   base();
   if (!BOSS || B.clearing || state !== 'play') return;
   if (ball.bombB && prevSide === 0 && B.ballSide === 1) { // 폭탄 공이 보스 쪽으로 넘어감
@@ -12193,7 +12189,7 @@ function bossExBreak(src) {
     base(p, inp, info);
     ball.sCurve = null; ball.bombB = null;
     if (special) return;
-    if (B.bombArmed) { B.bombArmed = false; ball.bombB = { who: [] }; ball.power = true; ball.fx = '255,120,40'; bossSfx('thud'); bossPop('💣 벌점 폭탄 공! 2명 이상 터치해서 넘기면 반사', '#ff8a3a', 100, 40); }
+    if (B.bombArmed) { B.bombArmed = false; ball.bombB = { who: [] }; ball.power = true; ball.fx = '255,120,40'; bossSfx('thud'); bossPop('💣 옐로카드 폭탄 공! 2명 이상 터치해서 넘기면 반사', '#ff8a3a', 100, 40); }
     else if (B.sNext && B.phase === 2) { B.sNext = false; releaseBall(60 + Math.random() * 100, 18); ball.power = true; ball.sCurve = { t: 0 }; ball.fx = '60,240,255'; bossSfx('zap'); bossPop('〰 유도 굴절 서브! S자로 휘어 들어옴', '#3cf0ff', 100, 36); }
     return;
   }
@@ -12220,7 +12216,7 @@ function bossExBreak(src) {
   if (BOSS) { bossParty().forEach((p) => (p.flipT = 0)); BOSS.sNext = BOSS.phase === 2 && v810('sCurve'); }
 }; }
 
-// 데미지: 자퇴 권고 중엔 결재 쉴드가 전부 받음 (융합 배율 그대로)
+// 데미지: 레드카드 퇴장 중엔 판정 쉴드가 전부 받음 (융합 배율 그대로)
 { const base = bossDamage; bossDamage = function (amount, o = {}) {
   const B = BOSS;
   if (!B || !B.ex || amount <= 0 || B.hp <= 0) return base(amount, o);
@@ -12232,13 +12228,13 @@ function bossExBreak(src) {
   return d;
 }; }
 
-// 스킬: 송리나 헌법 제1조 / 김민주 탄핵 소추 = 학칙 뒤집기 해제·취소
+// 스킬: 송리나 헌법 제1조 / 김민주 탄핵 소추 = 코트 체인지 해제·취소
 { const base = bossAutoPick; bossAutoPick = function (c) {
   base(c);
   const B = BOSS, on = (B.cast && B.cast.k === 'flip') || bossParty().some((p) => p.flipT > 0);
   if (!on || (c.kind !== 'rina' && c.kind !== 'kim')) return;
   const ARR = SKILL_ARR()[c.kind] || [], s = ARR.find((x) => x.key === (c.kind === 'rina' ? 'soc' : 'vote'));
-  if (s) { c.sk = s; if (c.kind === 'kim') c.counter = false; bossPop(`자동 락온: ${c.kind === 'rina' ? '헌법 제1조' : '탄핵 소추'} → 학칙 뒤집기 해제`, '#ffe14a', 140, 44); }
+  if (s) { c.sk = s; if (c.kind === 'kim') c.counter = false; bossPop(`자동 락온: ${c.kind === 'rina' ? '헌법 제1조' : '탄핵 소추'} → 코트 체인지 해제`, '#ffe14a', 140, 44); }
 }; }
 { const base = bossSkillCounter; bossSkillCounter = function (c, key, elem, i) {
   const B = BOSS;
@@ -12246,7 +12242,7 @@ function bossExBreak(src) {
     const had = (B.cast && B.cast.k === 'flip') || bossParty().some((p) => p.flipT > 0);
     if (B.cast && B.cast.k === 'flip') B.cast = null;
     bossParty().forEach((p) => (p.flipT = 0));
-    if (had) { bossPop('학칙 뒤집기 무효! 조작 원래대로', '#7dff9a', 116, 40); B.stats.clutch[i]++; B.rallyG += 10; }
+    if (had) { bossPop('코트 체인지 무효! 조작 원래대로', '#7dff9a', 116, 40); B.stats.clutch[i]++; B.rallyG += 10; }
   }
   base(c, key, elem, i);
 }; }
@@ -12256,7 +12252,7 @@ function bossExBreak(src) {
   base();
   const B = BOSS; if (!B) return;
   const b = players[1], top = hitTop(b), t = b.anim, now = performance.now();
-  if (B.ex) { // 자퇴 권고: 붉은 결재 돔 + 결재 쉴드 바 + 남은 시간
+  if (B.ex) { // 레드카드 퇴장: 붉은 판정 돔 + 판정 쉴드 바 + 남은 시간
     const k = Math.max(0, B.ex.hp / B.ex.hpMax), cx = b.x, cy = (top + b.y + 32) / 2;
     ctx.save();
     ctx.globalAlpha = 0.25 + 0.15 * Math.sin(t * 0.4);
@@ -12268,7 +12264,7 @@ function bossExBreak(src) {
     bar(cx - 50, top - 62, 100, 7, k, '#ff7ab6', '#ff2a6a');
     text(`📜 ${BKI().exName} ${(B.ex.t / 25).toFixed(1)}초`, cx, top - 66, 8, Math.floor(now / 200) % 2 ? '#ff2a6a' : '#ffffff');
   }
-  if (ball.bombB && state === 'play') { // 벌점 폭탄 공: 도화선 불꽃 + 터치 수
+  if (ball.bombB && state === 'play') { // 옐로카드 폭탄 공: 도화선 불꽃 + 터치 수
     const n = ball.bombB.who.length;
     ctx.save(); ctx.fillStyle = 'rgba(30,20,20,.55)'; ctx.beginPath(); ctx.arc(ball.x, ball.y, 15, 0, 7); ctx.fill();
     ctx.strokeStyle = '#ffb040'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ball.x + 8, ball.y - 12); ctx.quadraticCurveTo(ball.x + 14, ball.y - 22, ball.x + 6, ball.y - 26); ctx.stroke();
@@ -12291,8 +12287,8 @@ function bossExBreak(src) {
 }; }
 
 // =====================================================================
-// ===== (v9.0) 보스 여러 명 + 공통 패턴 엔진 — 보스 2 '대선사 주지스님' (v9.1에 보스 3 'AI 교장선생님') =====
-// bossKind: 0 마왕 이사장(원래 기믹 그대로) / 1 대선사 주지스님 / 2 AI 교장선생님
+// ===== (v9.0) 보스 여러 명 + 공통 패턴 엔진 — 보스 2 '대선사 주지스님' (v9.1에 보스 3 '배구봇 V-9000') =====
+// bossKind: 0 마왕 주심(원래 기믹 그대로) / 1 대선사 주지스님 / 2 배구봇 V-9000
 // 보스 1이 아니면 페이즈 기믹(bossTickP1~3) 대신 '패턴 엔진'(pxTick)이 돌아감: 난이도·페이즈만큼 풀린 패턴을 정해진 간격으로 뽑아 실행
 //   풀리는 패턴 = 패턴 tier ≤ min(난이도, 페이즈) (노멀은 언제나 노멀 패턴만, 고트는 3페이즈에서 고트 패턴까지)
 //   동시에 켜지는 수 PX_MAX [1, 2, 3, 3] (헬·고트는 조작 방해 1개 포함까지)
@@ -12312,24 +12308,24 @@ const PX_AI_REACT = [5, 10, 15];             // AI 팀원이 위험을 보고 �
 
 // ----- 보스 정보 -----
 const BOSS_KINDS = [
-  { name: '마왕 이사장', title: "'절대 통제자' 마왕 이사장", col: '#ff5a8a', glow: '255,42,106', win: '🎓 절대 통제자를 쓰러뜨리고 무사히 졸업했다!', exName: '자퇴 권고', exHan: '自退 勸告' },
+  { name: '마왕 주심', title: "'절대 판정자' 마왕 주심", col: '#ff5a8a', glow: '255,42,106', win: '🏆 절대 판정자를 쓰러뜨리고 공정한 경기를 되찾았다!', exName: '레드카드 퇴장', exHan: 'RED CARD' },
   { name: '대선사 주지스님', title: "'삼도천의 수문장' 대선사 주지스님", col: '#ffb040', glow: '255,176,64', win: '🪷 삼도천을 건너 깨달음을 얻었다!', exName: '열반 무아지경', exHan: '無我之境',
     sh: ['order', 'phys', null], // 페이즈별 쉴드 (null = 속성이 계속 바뀜)
     goat: { partyHp: 4, exMul: 1.85, gapMul: 0.75 }, // 고트 추가 조정 (목표: 강한 AI 파티 승률 5% 이하, v9.3 AI 피하기 좋아져서 다시 맞춤)
     over: [null, null, { partyHp: 14 }, null], // 헬 파티 HP 18 → 14
-    mul: [[1.3, 1.3, 1.15], [1.35, 1.35, 1.2], [1.4, 1.4, 1.25], [1.45, 1.45, 1.3]], // 난이도별 [HP, 쉴드, 공격력] 배율 (이사장 기준)
+    mul: [[1.3, 1.3, 1.15], [1.35, 1.35, 1.2], [1.4, 1.4, 1.25], [1.45, 1.45, 1.3]], // 난이도별 [HP, 쉴드, 공격력] 배율 (마왕 주심 기준)
     phase: [null, { name: '목탁 소리의 경고', sub: '자비 & 수행', col: '#ffb040' }, { name: '사천왕의 진노', sub: '번뇌 & 업보', col: '#ff6a2a' }, { name: '열반의 문', sub: '윤회 & 무아', col: '#ffe680' }],
     lines: { start: ['어서 오게. 오늘 수행은 배구라네.', '나무아미타불… 공을 받아 보게.', '번뇌가 많구나, 학생.'], hit: ['허허, 제법이군.', '좋은 공이다. 하지만 아직 멀었다.', '옴마니반메훔!'],
       point: ['마음이 흔들렸구나.', '집착을 버리게.', '한 점의 깨달음이다.'], groggy: ['허어… 수행이 부족했나…'], rage: ['일갈(一喝)!!'], p2: ['사천왕이여, 문을 지켜라!', '업보는 돌아오는 법.'], p3: ['이제 열반의 문을 열겠다.', '윤회의 굴레에서 벗어나 보게.'],
       ex: ['무아지경에 들겠다. 막을 수 있겠나?', '모든 것은 공(空)으로 돌아간다.'] } },
-  { name: 'AI 교장선생님', title: "'초차원 연산체' AI 교장선생님", col: '#3cf0ff', glow: '60,240,255', win: '💾 AI 교장의 서버를 다운시키고 자유를 얻었다!', exName: 'Fatal Error', exHan: 'FATAL ERROR',
+  { name: '배구봇 V-9000', title: "'초차원 연산체' 배구봇 V-9000", col: '#3cf0ff', glow: '60,240,255', win: '💾 V-9000의 서버를 다운시키고 자유를 얻었다!', exName: 'Fatal Error', exHan: 'FATAL ERROR',
     sh: ['cyber', 'pyro', null],
     goat: { partyHp: 4, exMul: 1.6, gapMul: 0.72 }, over: [null, null, { partyHp: 9 }, null], gap: [1, 0.9, 0.7, 1], // over = 난이도별 값 덮어쓰기 · gap = 난이도별 패턴 간격 배율 (보스 3이 제일 빡셈)
     mul: [[1.6, 1.5, 1.3], [1.65, 1.55, 1.35], [1.85, 1.75, 1.5], [1.75, 1.65, 1.45]],
     phase: [null, { name: '부팅 시퀀스', sub: '스캔 & 디버그', col: '#3cf0ff' }, { name: '오버클럭', sub: '바이러스 & 방화벽', col: '#b65aff' }, { name: '특이점', sub: '롤백 & 치명적 오류', col: '#ff3b8b' }],
-    lines: { start: ['출석 확인 완료. 학습을 시작합니다.', '이 학교는 이제 내가 연산한다.', '랠리 성공 확률: 3.2%.'], hit: ['오류 감지.', '예측 범위 밖의 입력입니다.', '피해량 기록 중…'],
+    lines: { start: ['V-9000 부팅 완료. 배구 데이터 10억 경기 학습.', '이 코트는 이제 내가 연산한다.', '당신들의 승률: 3.2%.'], hit: ['오류 감지.', '예측 범위 밖의 입력입니다.', '피해량 기록 중…'],
       point: ['예측 적중.', '학습 데이터 +1.', '당신의 패턴은 분석 완료.'], groggy: ['시스템… 재부팅…'], rage: ['과부하 출력!!'], p2: ['오버클럭 개시.', '방화벽 레벨 MAX.'], p3: ['특이점 도달.', '롤백을 실행합니다.'],
-      ex: ['FATAL ERROR. 전 학생 퇴학 처리.', '코어 보호 모드. 8초 후 포맷.'] } },
+      ex: ['FATAL ERROR. 전원 로그아웃 처리.', '코어 보호 모드. 8초 후 포맷.'] } },
 ];
 const BKI = () => BOSS_KINDS[bossKind];
 
@@ -12356,10 +12352,10 @@ function pxGrid(kind) {
     R(17, 12, 3, 1, 'y'); R(23, 12, 3, 1, 'y'); // 반쯤 감은 금빛 눈
     R(18, 17, 6, 1, 'R'); R(15, 19, 12, 1, 'S');
     P(22, 7, 'y'); P(24, 7, 'y'); P(23, 6, 'y'); P(23, 8, 'y'); // 이마 점 (빛)
-  } else { // AI 교장선생님: 모니터 머리 + 정장 + 회로 선 + 학사모
+  } else { // 배구봇 V-9000: 모니터 머리 + 로봇 몸 + 회로 선 + 안테나
     R(17, 46, 6, 12, 'n'); R(26, 46, 6, 12, 'n'); R(15, 58, 9, 3, 'K'); R(25, 58, 8, 3, 'K'); // 다리
     R(14, 24, 21, 23, 'n'); R(13, 28, 23, 18, 'n');
-    R(20, 24, 9, 10, 'w'); R(23, 25, 3, 9, 'c'); // 셔츠 + 넥타이(시안)
+    R(19, 25, 11, 3, 'c'); R(21, 28, 7, 6, 'm'); R(23, 30, 3, 2, 'y'); // 가슴 코어 (시안 라인 + 노란 불빛)
     for (let j = 0; j < 4; j++) { R(15, 30 + j * 4, 4, 1, 'c'); R(30, 32 + j * 4, 4, 1, 'c'); P(18, 31 + j * 4, 'c'); } // 회로 선
     R(34, 26, 5, 15, 'n'); R(35, 40, 4, 3, 'g'); // 뒤 팔 (금속 손)
     R(8, 26, 7, 6, 'n'); R(6, 31, 6, 9, 'n'); R(6, 40, 5, 3, 'g'); // 앞 팔
@@ -12369,7 +12365,7 @@ function pxGrid(kind) {
     R(15, 9, 5, 3, 'c'); R(24, 9, 5, 3, 'c'); P(15, 8, 'c'); P(28, 8, 'c'); // 화난 픽셀 눈
     R(17, 15, 10, 1, 'c'); P(16, 14, 'c'); P(27, 14, 'c'); // 입
     R(13, 18, 22, 1, 'V'); // 스캔 줄
-    R(10, 1, 28, 3, 'K'); R(22, 0, 4, 2, 'K'); R(34, 3, 2, 6, 'y'); P(35, 9, 'y'); // 학사모 + 술
+    R(23, 0, 2, 4, 'g'); R(22, 0, 4, 1, 'y'); R(14, 2, 2, 3, 'g'); P(14, 1, 'c'); R(32, 2, 2, 3, 'g'); P(33, 1, 'c'); // 안테나 3개
   }
   const out = g.map((row) => row.slice());
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (!g[j][i]) for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const q = g[j + b] && g[j + b][i + a]; if (q) { out[j][i] = 'K'; break; } }
@@ -12402,9 +12398,9 @@ function applyBossKind(k) {
     if (K.over && K.over[i]) Object.assign(d, K.over[i]); });
 }
 
-// ----- v8.10 이사장 전용 패턴은 다른 보스에선 끔 (자퇴 권고 = 고트 공통 전멸기는 유지) -----
+// ----- v8.10 마왕 주심 전용 패턴은 다른 보스에선 끔 (레드카드 퇴장 = 고트 공통 전멸기는 유지) -----
 { const old = v810; v810 = (k) => (bossKind && k !== 'ex' ? (k === 'deskWarnPlus' ? 0 : 0) : old(k)); }
-// 508호 즉사 기믹은 이사장만
+// 508호 즉사 기믹은 마왕 주심만
 { const base = boss308Ready; boss308Ready = function () { return bossKind === 0 && base(); }; }
 
 // =====================================================================
@@ -12444,7 +12440,7 @@ const PX_PATTERNS = [null,
     { name: '공(空)의 무마찰 지대', type: 'ice', tier: 3, warn: 20, dur: 150, desc: '6초 얼음판 미끄러짐', ctl: true },
     { name: '삼라만상 속성 회전', type: 'rot', tier: 3, warn: 20, dur: 250, desc: '10초 동안 3초마다 쉴드 속성 변경' },
   ],
-  [ // 보스 3: AI 교장선생님 (v9.1)
+  [ // 보스 3: 배구봇 V-9000 (v9.1, v10.7 이름 바꿈)
     { name: '바이너리 코드 빔', type: 'cols', tier: 0, warn: 50, n: 3, desc: '세로 빔 3줄 → 줄 사이로!' },
     { name: '픽셀 그리드 볼', type: 'zig', tier: 0, warn: 45, desc: '다음 공격이 직각으로 2번 꺾임' },
     { name: '디버그 강스파이크', type: 'corner', tier: 0, warn: 45, desc: '다음 공격이 구석으로 강타' },
@@ -12650,7 +12646,7 @@ function pxBall() {
   if (crossing && X.reflT > 0 && ball.power && !(ball.pierce > 0)) { ball.vx = -Math.abs(ball.vx) * 0.6; ball.vy = Math.min(ball.vy, -4); ball.power = false; B.fx = null; X.hitCD = 12; heavy(NET_X + 10, ball.y, 1.2); bossSfx('zap'); bossPop('반사! 강스파이크는 튕겨 나감', PX_COL[bossKind].a, 104, 24); }
   else if (crossing && X.wallT > 0 && ball.y > 120 && !(ball.pierce > 0)) { ball.vx = -Math.abs(ball.vx) * 0.55; ball.vy = Math.min(ball.vy, -5); ball.power = false; B.fx = null; X.hitCD = 12; heavy(NET_X + 10, ball.y, 1.2); bossSfx('zap'); bossPop('장벽! 더 높게 넘겨', PX_COL[bossKind].a, 104, 24); }
 }
-// 보스 페이즈 기믹을 엔진으로 바꿔치기 (이사장은 그대로)
+// 보스 페이즈 기믹을 엔진으로 바꿔치기 (마왕 주심은 그대로)
 { const b1 = bossTickP1, b2 = bossTickP2, b3 = bossTickP3;
   const eng = (base) => function (D, b) { if (!bossKind) return base(D, b); pxTick(D); if (state === 'play' && BOSS && !BOSS.clearing) pxBall(); };
   bossTickP1 = eng(b1); bossTickP2 = eng(b2); bossTickP3 = eng(b3); }
@@ -12783,7 +12779,7 @@ function pxDrawTop() { // 선수 앞: 레이저·격자·반사막·장벽·회�
   const list = B.px.act.map((o) => o.P.name).concat(B.px.armed ? [B.px.armed.P.name + ' (장전)'] : []);
   list.slice(0, 3).forEach((n, i) => text('▶ ' + n, 8, 62 + i * 11, 7, PX_COL[bossKind].a, 'left'));
 }; }
-// ----- (v9.1) AI 교장: 시스템 백업 캐스팅 · 스킬 쿨다운 오버로드 -----
+// ----- (v9.1) 배구봇: 시스템 백업 캐스팅 · 스킬 쿨다운 오버로드 -----
 { const base = bossCast; bossCast = function (k) {
   if (k !== 'backup') { base(k); return; }
   BOSS.cast = { k, t: 0, dur: 75, name: CAST_INFO.backup[0] }; bossSfx('gaze');
@@ -13171,14 +13167,14 @@ function rkRecords(body, load) {
 // ===== (v9.3) AI 팀원이 보스 패턴 알아서 피하기 (보스 3명 모두) =====
 // 위험 구역을 모아서(aiHazards) → 옆으로 피할 곳 찾기(aiSafeX) · 바닥 충격파/낮은 레이저 = 점프 · 높은 레이저 = 점프 안 함
 // 점프 봉인 중엔 점프 안 함 · 얼음판에선 반대로 브레이크 · 실력별 반응 AI_REACT2 [8, 14, 22]프레임
-// 이사장: 책상 그림자 · 재앙 강타 자리 · 벌점 폭탄 (시선은 원래부터 멈춤)
+// 마왕 주심: 심판대 그림자 · 재앙 강타 자리 · 옐로카드 폭탄 (시선은 원래부터 멈춤)
 // =====================================================================
 const AI_REACT2 = [8, 14, 22];
 function aiHazards() {
   const B = BOSS, hz = [];
   if (bossKind && B.px) hz.push(...B.px.hz);
   if (!bossKind) {
-    for (const d of B.desks) if (!d.land) { hz.push({ x0: d.x - 22, x1: d.x + 22, left: Math.max(0, d.warn || 0), kind: 'any', tight: true }); if (!(d.warn > 0) && d.y > 150) hz.push({ x0: d.x - 22, x1: d.x + 22, left: 0, kind: 'ground' }); } // 책상: 옆으로 + 떨어지기 직전 점프
+    for (const d of B.desks) if (!d.land) { hz.push({ x0: d.x - 22, x1: d.x + 22, left: Math.max(0, d.warn || 0), kind: 'any', tight: true }); if (!(d.warn > 0) && d.y > 150) hz.push({ x0: d.x - 22, x1: d.x + 22, left: 0, kind: 'ground' }); } // 심판대: 옆으로 + 떨어지기 직전 점프
     if (B.cast && B.cast.k === 'disaster') { const left = Math.max(0, B.cast.dur - B.cast.t); for (const x of B.spots) hz.push({ x0: x - 24, x1: x + 24, left, kind: 'any', tight: true }); }
     for (const q of B.bombs) hz.push({ x0: q.x - 22, x1: q.x + 22, left: Math.max(0, q.warn || 0), kind: 'any' });
   }
@@ -13241,7 +13237,7 @@ function drawBossHelp() {
   if (pg === 0) {
     text('게이지 3개 (화면 위쪽 막대)', cx, 106, 12, '#ffffff');
     bar(128, '😡', '통제도', '#ff5a5a', 0.75, '보스 분노. 실점·패턴에 맞으면 올라가 (오르면 나쁨)', '100 → 강한 스파이크 / 고트는 전멸기!');
-    bar(178, '💪', '교칙 준수율', '#ffd23f', 0.6, '우리 콤보. 3단 연계·약점 공격·파훼로 올라가 (좋음)', '100 → 전원 마나 MAX + 10초 데미지 2배');
+    bar(178, '💪', '페어플레이', '#ffd23f', 0.6, '우리 콤보. 3단 연계·약점 공격·파훼로 올라가 (좋음)', '100 → 전원 마나 MAX + 10초 데미지 2배');
     bar(228, '🛡', '브레이크', '#7ae7ff', 0.3, '보스 버티기. 블로킹·스킬·약점·머리로 깎여 (깎으면 좋음)', '0 → 보스 기절(그로기) = 딜 타임');
   } else if (pg === 1) {
     text('속성 4개 · 약점으로 때리면 쉴드 피해 2배', cx, 106, 11, '#ffffff');
@@ -13267,7 +13263,7 @@ function drawBossHelp() {
   } else {
     text('보스별 쉴드와 약점', cx, 106, 12, '#ffffff');
     const ic = (e) => `${ELEM[e].ic}→${ELEM[WEAK[e]].ic}`;
-    const rows = [[BOSS_KINDS[0], `1P ${ic('order')}  2P ${ic('cyber')}  3P 원소 구체 4개 → 속성 맞춰 깨기`, '고트 전멸기: 자퇴 권고'],
+    const rows = [[BOSS_KINDS[0], `1P ${ic('order')}  2P ${ic('cyber')}  3P 원소 구체 4개 → 속성 맞춰 깨기`, '고트 전멸기: 레드카드 퇴장'],
       [BOSS_KINDS[1], `1P ${ic('order')}  2P ${ic('phys')}  3P 계속 바뀜 (약점 아이콘 보기)`, '고트 전멸기: 열반 무아지경'],
       [BOSS_KINDS[2], `1P ${ic('cyber')}  2P ${ic('pyro')}  3P 계속 바뀜 (3초마다!)`, '고트 전멸기: Fatal Error']];
     rows.forEach(([K, l1, l2], i) => { const y = 128 + i * 44; ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.beginPath(); ctx.roundRect(26, y - 14, 268, 38, 8); ctx.fill();
@@ -13287,7 +13283,7 @@ function bossTip(k, msg) {
   base();
   const B = BOSS; if (!B || B.clearing) return;
   if (B.rage >= 70) bossTip('rage', '😡 통제도가 높아! 100이 되면 위험 → 실점을 줄여');
-  if (B.buffT > 0 && !(BTIP.prev.buff > 0)) bossTip('buff', '💪 교칙 준수율 100%! 10초 동안 데미지 2배 → 지금 몰아쳐');
+  if (B.buffT > 0 && !(BTIP.prev.buff > 0)) bossTip('buff', '💪 페어플레이 100%! 10초 동안 데미지 2배 → 지금 몰아쳐');
   if (B.groggyT > 0 && !(BTIP.prev.grog > 0)) bossTip('groggy', '💫 그로기! 쉴드가 깨졌어 → 지금 때리면 300%');
   BTIP.prev.buff = B.buffT; BTIP.prev.grog = B.groggyT;
 }; }
@@ -14322,9 +14318,9 @@ const CARD_BG = [
   { id: 'sakura', n: '벚꽃잎', r: 'r', c: ['#ffd1e6', '#ff8fbf'], p: 'emo:🌸', u: C_((s) => s.star >= 100, '트로피 로드 ⭐100'), road: 100 },
   { id: 'snowy', n: '눈송이', r: 'r', c: ['#bfe3ff', '#6f9fe0'], p: 'emo:❄️', u: C_((s) => s.star >= 200, '트로피 로드 ⭐200'), road: 200 },
   // 보통
-  { id: 'chair', n: '이사장실', r: 'e', c: ['#b8233f', '#4a0d1c'], p: 'emo:⚖️', u: C_((s) => s.clear(0), '이사장 보스 클리어 (아무 난이도)') },
+  { id: 'chair', n: '심판대', r: 'e', c: ['#b8233f', '#4a0d1c'], p: 'emo:🟥', u: C_((s) => s.clear(0), '마왕 주심 클리어 (아무 난이도)') },
   { id: 'temple', n: '대선사 금빛', r: 'e', c: ['#ffcf5a', '#b8761f'], p: 'emo:🙏', u: C_((s) => s.clear(1), '주지스님 보스 클리어') },
-  { id: 'circuit', n: '회로 기판', r: 'e', c: ['#0f4f4a', '#05201f'], p: 'circuit', u: C_((s) => s.clear(2), 'AI 교장 보스 클리어') },
+  { id: 'circuit', n: '회로 기판', r: 'e', c: ['#0f4f4a', '#05201f'], p: 'circuit', u: C_((s) => s.clear(2), '배구봇 V-9000 클리어') },
   { id: 'flames', n: '활활', r: 'e', c: ['#ff7a2a', '#8a1d0d'], p: 'flames', a: 1, u: C_((s) => s.st >= 5, '5연승') },
   { id: 'bolt', n: '번개', r: 'e', c: ['#2b2f6b', '#0c0f2e'], p: 'bolt', a: 1, u: C_((s) => s.ob >= 5, '온라인 5연승') },
   { id: 'matrix', n: '디지털 비', r: 'e', c: ['#06210f', '#000a04'], p: 'matrix', a: 1, u: C_((s) => s.w >= 30, '30승') },
@@ -14349,7 +14345,7 @@ const CARD_PIN = [
   { id: '🌙', r: 'r', u: C_((s) => s.star >= 50, '트로피 로드 ⭐50'), road: 50 }, { id: '🎮', r: 'r', u: C_((s) => s.on >= 1, '온라인 1판') }, { id: '🤝', r: 'r', u: C_((s) => s.fr >= 1, '친구 1명') },
   { id: '🐯', r: 'e', u: C_((s) => s.w >= 20, '20승') }, { id: '🦊', r: 'e', u: C_((s) => s.star >= 250, '트로피 로드 ⭐250'), road: 250 }, { id: '🐼', r: 'e', u: C_((s) => s.g >= 50, '경기 50판') },
   { id: '💎', r: 'e', u: C_((s) => s.rp >= 700, '랭크 다이아 (700)') }, { id: '👹', r: 'e', u: C_((s) => s.any, '보스 아무거나 클리어') }, { id: '🧘', r: 'e', u: C_((s) => s.clear(1), '주지스님 클리어') },
-  { id: '🤖', r: 'e', u: C_((s) => s.clear(2), 'AI 교장 클리어') }, { id: '💪', r: 'e', u: C_((s) => s.st >= 5, '5연승') }, { id: '🎯', r: 'e', u: C_((s) => s.ow >= 5, '온라인 5승') },
+  { id: '🤖', r: 'e', u: C_((s) => s.clear(2), '배구봇 V-9000 클리어') }, { id: '💪', r: 'e', u: C_((s) => s.st >= 5, '5연승') }, { id: '🎯', r: 'e', u: C_((s) => s.ow >= 5, '온라인 5승') },
   { id: '👑', r: 'l', u: C_((s) => s.rp >= 1000, '랭크 마스터 (1000)') }, { id: '🐐', r: 'l', u: C_((s) => s.goat, '보스전 GOAT') }, { id: '🦖', r: 'l', u: C_((s) => s.w >= 100, '100승') },
   { id: '🌟', r: 'l', u: C_((s) => s.star >= 1000, '트로피 로드 ⭐1000'), road: 1000 }, { id: '💀', r: 'l', u: C_((s) => s.st >= 10, '10연승') }, { id: '🐉', r: 'l', u: C_((s) => s.hell, '보스 헬 이상 클리어') },
   { id: '🏆', r: 'l', u: C_((s) => s.ob >= 10, '온라인 10연승') }, { id: '🦄', r: 'l', u: C_((s) => s.m10, '캐릭터 숙련 Lv.10') },

@@ -1,5 +1,5 @@
 // ===== 설정 (여기만 바꾸면 돼요) =====
-const GAME_VERSION = 'v9.1'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
+const GAME_VERSION = 'v9.2.1'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
 const CONFIG = {
   WIN_SCORE: 15,          // 몇 점 내면 이기는지
   FPS: 25,                // 1초에 몇 번 움직이는지 (원작 보통 속도 25)
@@ -328,9 +328,9 @@ let menuLv = 'main'; // 'main' | 'play' | 'set'
 function curMenu() {
   if (menuLv === 'play') return ['혼자 플레이 (vs AI)', '같이 플레이 (한 키보드)', '온라인 대전', '← 뒤로'];
   if (menuLv === 'set') return ['조작 방법', MOBILE.on ? '📱 모바일 조작: 켜짐' : '📱 모바일 조작: 꺼짐', AUTH.user ? '👤 계정 (로그아웃)' : '👤 로그인 / 회원가입', '← 뒤로'];
-  return ['🏐 플레이', '👹 보스전', '📖 기록실', '⚙️ 설정'];
+  return ['🏐 플레이', '👹 보스전', '🏆 랭킹', '📖 기록실', '⚙️ 설정']; // v9.2 랭킹 따로
 }
-const MENU_GAP = 30; // 메뉴 칸 간격 (4개라 넉넉하게)
+const MENU_GAP = 26; // 메뉴 칸 간격 (v9.2 큰 메뉴 5개)
 const menuY = (i) => 124 + i * MENU_GAP; // 글자 가운데 y (그리기·터치 같이 씀)
 function menuGo(lv, idx = 0) { menuLv = lv; menuIdx = idx; sfx('pop'); pressed.clear(); }
 // 혼자 플레이 (AI전)
@@ -6970,14 +6970,15 @@ function update() {
     const up = pressed.has('KeyR') || pressed.has('ArrowUp'), dn = pressed.has('KeyF') || pressed.has('ArrowDown'), M = curMenu();
     if (menuIdx >= M.length) menuIdx = 0;
     if (up || dn) { menuIdx = (menuIdx + (dn ? 1 : M.length - 1)) % M.length; sfx('pop'); }
-    if (pressed.has('Escape') && menuLv !== 'main') menuGo('main', menuLv === 'set' ? 3 : 0); // Esc = 큰 메뉴로
+    if (pressed.has('Escape') && menuLv !== 'main') menuGo('main', menuLv === 'set' ? 4 : 0); // Esc = 큰 메뉴로
     else if (powerPressed()) {
       const lv = menuLv, i = menuIdx;
       if (lv === 'main' && i === 0) menuGo('play');
       else if (lv === 'main' && i === 1) { state = 'bossMenu'; timer = 0; sfx('pop'); pressed.clear(); }
-      else if (lv === 'main' && i === 2) { sfx('pop'); pressed.clear(); recOpen(AUTH.user ? 'me' : 'rank'); }
+      else if (lv === 'main' && i === 2) { sfx('pop'); pressed.clear(); recOpen('rank'); }
+      else if (lv === 'main' && i === 3) { sfx('pop'); pressed.clear(); recOpen('me'); }
       else if (lv === 'main') menuGo('set');
-      else if (i === 3) menuGo('main', lv === 'set' ? 3 : 0); // ← 뒤로
+      else if (i === 3) menuGo('main', lv === 'set' ? 4 : 0); // ← 뒤로
       else if (lv === 'set' && i === 0) { state = 'howto'; timer = 0; }
       else if (lv === 'set' && i === 1) { state = 'mobileSetup'; timer = 0; mobileIdx = MOBILE.on ? MOBILE_OPTS.indexOf(MOBILE.layout) : 0; sfx('pop'); pressed.clear(); }
       else if (lv === 'set') { sfx('pop'); pressed.clear(); authOpen(); }
@@ -9500,15 +9501,16 @@ function bossUpdateSelect() {
   const P = bossParty(), n = NCHAR;
   players.forEach((p) => p.anim++);
   const humans = P.filter((p) => !p.ai);
+  let just = false; // v9.2.1 내가 고른 그 Z가 AI 팀원 1번까지 같이 골라 버리던 버그 → 고른 프레임엔 AI 고르기 안 함
   for (const p of humans) {
     if (p.picked) continue;
     const k = p.keys;
     if (pressed.has(k.l)) p.char = (p.char + n - 1) % n;
     if (pressed.has(k.r)) p.char = (p.char + 1) % n;
     if (pressed.has(k.u) || pressed.has(k.d)) p.char = selRow(p.char);
-    if (pressed.has(k.a)) { p.picked = true; sfx('pop'); popups.push({ text: '선택!', x: bossPanelX(players.indexOf(p)), y: 200, t: 20, color: p.color }); }
+    if (pressed.has(k.a)) { p.picked = true; just = true; sfx('pop'); popups.push({ text: '선택!', x: bossPanelX(players.indexOf(p)), y: 200, t: 20, color: p.color }); }
   }
-  if (!humans.every((p) => p.picked)) return;
+  if (!humans.every((p) => p.picked) || just) return;
   // 사람이 다 골랐으면: 1P가 AI 팀원 캐릭터도 골라 줌 (온라인은 랜덤 자동)
   const A = P.find((p) => p.ai && !p.picked);
   if (A) {
@@ -11041,7 +11043,7 @@ function authOpen() {
         <button id="auGo" style="${btn};width:100%;margin-top:10px;padding:12px;font-size:17px;background:#5aa8ff"></button>
       </div>
       <div id="auIn" style="display:none">
-        <button id="auRec" style="${btn};width:100%;padding:12px;font-size:16px;background:#5aa8ff;margin-bottom:8px">📖 기록실 (랭킹·친구·전적) · K</button>
+        <button id="auRec" style="${btn};width:100%;padding:12px;font-size:16px;background:#5aa8ff;margin-bottom:8px">📖 기록실 (프로필·친구·기록)</button>
         <button id="auOut" style="${btn};width:100%;padding:10px;font-size:15px;background:#c2185b">로그아웃</button>
       </div>
       <div id="auMsg" style="min-height:20px;margin-top:10px;font-size:14px;white-space:pre-line"></div>
@@ -12755,3 +12757,370 @@ function pxDrawTop() { // 선수 앞: 레이저·격자·반사막·장벽·회�
   return base(amount, o);
 }; }
 { const base = addMP; addMP = function (p, mp) { if (bossMode && BOSS && BOSS.px && BOSS.px.taxT > 0 && p && !p.boss) mp *= 0.5; return base(p, mp); }; }
+
+// =====================================================================
+// ===== (v9.2) 랭킹 화면 따로 + 기록실 3탭 개편 (사용자가 시안 6장 보고 'ㄱㄱ') =====
+// 같은 창(REC.ui)을 두 가지로 씀: REC.mode 'rank' = 🏆 랭킹 (온라인 · 보스전 · 캐릭터) / 'room' = 📖 기록실 (프로필 · 친구 · 기록 + 관리)
+// 큰 글자·큰 버튼(높이 44px 이상), 맨 아래 주황 줄 = 나 (내 순위는 Firestore '개수 세기'로 읽기 1번)
+// 새 기록 칸: fav = 대표 캐릭터 (꾸미기에서 고름, 없으면 제일 많이 쓴 캐릭터)
+// 숙련도 = 캐릭터별 판 수로 1~10 (보여 주기만, 풀리는 건 없음) MASTERY 표
+// 그리기는 전부 DOM (rH) + 아래 CSS 클래스 rk-*. 다른 사람이 쓴 글자는 textContent로만
+// =====================================================================
+const MASTERY = [1, 5, 10, 20, 35, 50, 75, 100, 150, 200]; // 판 수 → 숙련도 1~10
+const mastery = (g) => MASTERY.filter((n) => (g || 0) >= n).length;
+const RANK_TABS = [['online', '⚔️ 온라인'], ['boss', '👑 보스전'], ['char', '🧑 캐릭터']];
+const ROOM_TABS = [['me', '👤 프로필'], ['friend', '🤝 친구'], ['rec', '📜 기록']];
+const RK_CSS = `
+#rcWrap{position:fixed;inset:0;display:none;z-index:21;background:#141a3a radial-gradient(rgba(255,255,255,.05) 1.5px,transparent 1.6px) 0 0/18px 18px;color:#fff;
+ font-family:"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif;user-select:text;-webkit-user-select:text;touch-action:auto;flex-direction:column}
+#rcWrap *{box-sizing:border-box}
+.rk-top{flex:none;height:62px;display:flex;align-items:center;gap:12px;padding:0 14px;background:#0c1030;border-bottom:3px solid #000}
+.rk-back{width:52px;height:44px;border-radius:10px;background:#2b3358;border:3px solid #000;box-shadow:inset 0 -4px 0 rgba(0,0,0,.35);color:#fff;font-size:20px;font-weight:900;cursor:pointer;flex:none}
+.rk-title{font-size:24px;font-weight:900;text-shadow:0 3px 0 #000;white-space:nowrap}
+.rk-tabs{display:flex;gap:8px;margin-left:auto;overflow-x:auto}
+.rk-tab{min-width:112px;height:46px;padding:0 14px;border-radius:12px;border:3px solid #000;background:#2b3358;box-shadow:inset 0 -5px 0 rgba(0,0,0,.35);color:#cfd6ff;font-weight:900;font-size:17px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.rk-tab.on{background:#ff8a3d;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.4)}
+.rk-body{flex:1;min-height:0;display:flex;gap:14px;padding:12px 14px;max-width:1100px;width:100%;margin:0 auto}
+.rk-side{width:250px;flex:none;display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0}
+.rk-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;min-height:0}
+.rk-scroll{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding-right:2px}
+.rk-box{background:#1e2650;border:3px solid #000;border-radius:14px;box-shadow:inset 0 3px 0 rgba(255,255,255,.08),0 4px 0 rgba(0,0,0,.4);padding:12px}
+.rk-h{font-size:14px;color:#9aa4d8;font-weight:900;margin:0 2px 6px}
+.rk-pill{min-height:46px;border-radius:12px;border:3px solid #000;background:#2b3358;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:900;font-size:17px;color:#cfd6ff;box-shadow:inset 0 -5px 0 rgba(0,0,0,.35);cursor:pointer;font-family:inherit;padding:0 12px;width:100%}
+.rk-pill.on{background:#ffd23f;color:#1a1a1a}
+.rk-row{min-height:56px;display:flex;align-items:center;gap:10px;padding-right:12px;border-radius:12px;border:3px solid #000;background:#3a4170;box-shadow:inset 0 -4px 0 rgba(0,0,0,.3);cursor:pointer;flex:none}
+.rk-row.me{background:#ff8a3d}
+.rk-rk{width:50px;align-self:stretch;display:grid;place-items:center;font-size:22px;font-weight:900;background:rgba(0,0,0,.25);border-radius:9px 0 0 9px;color:#cfd6ff;flex:none}
+.rk-row.me .rk-rk{color:#fff}
+.rk-av{width:44px;height:44px;border-radius:9px;border:2px solid #000;background:#0e1226 center/cover;flex:none}
+.rk-nm{display:flex;flex-direction:column;line-height:1.2;min-width:0;flex:1}
+.rk-nm b{font-size:18px;font-weight:900;text-shadow:0 2px 0 rgba(0,0,0,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rk-nm i{font-style:normal;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rk-sc{font-size:22px;font-weight:900;text-shadow:0 2px 0 rgba(0,0,0,.5);text-align:right;line-height:1.1;white-space:nowrap}
+.rk-sc small{display:block;font-size:11px;color:#e6e9ff;font-weight:700}
+.rk-badge{width:52px;height:42px;border-radius:10px;border:3px solid #000;display:grid;place-items:center;font-size:20px;flex:none}
+.rk-msg{margin:22px 4px;color:#9aa4d8;font-size:15px;font-weight:700;white-space:pre-line;text-align:center}
+.rk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.rk-cg{position:relative;aspect-ratio:1;border-radius:9px;border:3px solid #000;background:#0e1226 center/cover;cursor:pointer}
+.rk-cg.on{outline:3px solid #ffd23f;outline-offset:1px}
+.rk-lv{position:absolute;right:-4px;bottom:-5px;min-width:22px;height:20px;border-radius:6px;border:2px solid #000;color:#111;font-size:12px;font-weight:900;display:grid;place-items:center;padding:0 3px}
+.rk-bcard{min-height:72px;border-radius:12px;border:3px solid #000;display:flex;align-items:center;gap:10px;padding:4px 10px;background:#2b3358;box-shadow:inset 0 -5px 0 rgba(0,0,0,.35);cursor:pointer;flex:none}
+.rk-bcard img{height:60px;image-rendering:pixelated}
+.rk-bcard.on{outline:4px solid #ffd23f;outline-offset:-1px}
+.rk-stat{flex:1;text-align:center;min-width:120px}
+.rk-in{flex:1;min-width:120px;height:44px;padding:0 10px;font-size:16px;border-radius:10px;border:3px solid #000;background:#0e1226;color:#fff;font-family:inherit}
+.rk-old{max-width:640px}
+@media (max-width:480px){ .rk-title{display:none} .rk-tabs{margin-left:0;flex:1} .rk-tab{flex:1} }
+@media (max-width:700px){ .rk-body{flex-direction:column;overflow-y:auto} .rk-side{width:auto !important;overflow:visible} .rk-scroll{overflow:visible} .rk-tab{min-width:0;font-size:15px;padding:0 10px} .rk-title{font-size:19px} .rk-main{min-height:auto} }
+@media (max-height:460px){ .rk-top{height:52px} .rk-tab,.rk-back{height:40px} .rk-row{min-height:50px} .rk-av{width:38px;height:38px} .rk-body{padding:8px 12px} }
+`;
+const charThumb = (() => { const C = {}; return (i) => {
+  if (i === undefined || i === null || !CHARACTERS[i]) return '';
+  if (C[i]) return C[i];
+  const im = imgs['char' + i];
+  try { if (im && im.toDataURL) return (C[i] = im.toDataURL()); if (im && im.complete && im.naturalWidth) { const c = document.createElement('canvas'), s = 96 / Math.max(im.naturalWidth, im.naturalHeight); c.width = Math.round(im.naturalWidth * s); c.height = Math.round(im.naturalHeight * s); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return (C[i] = c.toDataURL()); } } catch (e) {}
+  return CHARACTERS[i].img || '';
+}; })();
+const bossThumb = (() => { const C = []; return (k) => C[k] || (C[k] = BOSS_IMGS[k].idle.toDataURL()); })();
+function favChar(u) { // 대표 캐릭터: 고른 것 → 없으면 제일 많이 쓴 것
+  if (u && u.fav !== undefined && u.fav !== null && CHARACTERS[u.fav]) return +u.fav;
+  const ch = (u && u.chars) || {}; let best = -1, g = 0;
+  for (const k in ch) if (CHARACTERS[k] && (ch[k].g || 0) > g) { g = ch[k].g; best = +k; }
+  return best >= 0 ? best : 0;
+}
+const ago = (t) => { if (!t) return '-'; const m = Math.floor((Date.now() - t) / 60000); return m < 3 ? '🟢 지금 접속' : m < 60 ? `${m}분 전` : m < 1440 ? `${Math.floor(m / 60)}시간 전` : `${Math.floor(m / 1440)}일 전`; };
+const onPlayed = (u) => (u.onW || 0) + (u.onL || 0) > 0;
+// 개수 세기 (내 순위): field 값이 내 값보다 좋은 사람 수 + 1
+async function fsCount(field, op, value) {
+  const j = await fsReq('POST', ':runAggregationQuery', { structuredAggregationQuery: { structuredQuery: { from: [{ collectionId: 'users' }], where: { fieldFilter: { field: { fieldPath: field }, op, value: fsVal(value) } } }, aggregations: [{ alias: 'n', count: {} }] } });
+  const r = (j || []).find((e) => e.result); return r ? +((r.result.aggregateFields.n || {}).integerValue || 0) : 0;
+}
+const fp = (path) => path.split('.').map((s) => (/^[A-Za-z_][A-Za-z_0-9]*$/.test(s) ? s : '`' + s + '`')).join('.'); // 숫자 칸은 `3` 처럼
+
+// ----- 공통 줄 -----
+function rkRow(o) { // {rank, me, u, ch, score, sub, badge:[색, 글자], onclick}
+  const t = recTitleOf(o.u || {}) || null;
+  const row = rH('div', '', null, [
+    rH('div', `color:${o.rank === 1 ? '#ffd23f' : o.rank === 2 ? '#e3e8f2' : o.rank === 3 ? '#e09a5a' : ''}`, o.rank ? String(o.rank) : '-'),
+    rH('div', `background-image:url("${charThumb(o.ch)}")`),
+    rH('div', '', null, [rH('b', `color:${o.me ? '#fff' : recColor((o.u || {}).color)}`, recEmoji((o.u || {}).emoji) + ' ' + recName(o.u) + (o.me ? ' (나)' : '')), rH('i', `color:${o.me ? '#fff' : t ? t[2] : '#9aa4d8'}`, t ? t[1] : (o.u && o.u.id ? '@' + o.u.id : ''))]),
+    rH('div', '', null, [document.createTextNode(o.score), rH('small', '', o.sub || '')]),
+    o.badge ? rH('div', `background:${o.badge[0]}`, o.badge[1]) : null]);
+  row.className = 'rk-row' + (o.me ? ' me' : '');
+  ['rk-rk', 'rk-av', 'rk-nm', 'rk-sc', 'rk-badge'].forEach((c, i) => row.children[i] && (row.children[i].className = c));
+  row.onclick = o.onclick || (() => { if (o.u && o.u._id) recShowProfile(o.u._id); });
+  return row;
+}
+const tierBadge = (u) => { if (!onPlayed(u)) return ['#4a5078', '-']; const t = tierOf(u.rp); return [t[2], t[3]]; };
+const pill = (txt, on, fn, css = '') => { const b = rH('button', css, txt); b.className = 'rk-pill' + (on ? ' on' : ''); b.onclick = fn; return b; };
+const box = (kids, css = '') => { const d = rH('div', css, null, kids); d.className = 'rk-box'; return d; };
+const head = (t) => { const d = rH('div', '', t); d.className = 'rk-h'; return d; };
+const msg = (t) => { const d = rH('div', '', t); d.className = 'rk-msg'; return d; };
+
+// ----- 창 열기·그리기 -----
+recOpen = function (tab) {
+  if (!REC.ui) {
+    const st = document.createElement('style'); st.textContent = RK_CSS; document.head.appendChild(st);
+    const d = rH('div'); d.id = 'rcWrap';
+    const panel = rH('div', 'display:flex;flex-direction:column;height:100%'); panel.id = 'rcPanel'; d.appendChild(panel);
+    d.addEventListener('pointerdown', (e) => e.stopPropagation());
+    document.body.appendChild(d); REC.ui = d;
+  }
+  if (tab) { const isRank = ['rank', 'online', 'boss', 'char'].includes(tab); REC.mode = isRank ? 'rank' : 'room'; if (isRank) REC.rtab = tab === 'rank' ? REC.rtab || 'online' : tab; else REC.tab = tab === 'cert' || tab === 'stat' ? 'rec' : tab === 'deco' ? 'me' : tab; }
+  REC.view = null; REC.open = true; window.AUTH_OPEN = true; down.clear(); pressed.clear();
+  REC.ui.style.display = 'flex'; recDraw();
+  if (AUTH.user && FB_ON()) recSync();
+};
+recDraw = function () {
+  if (!REC.ui) return;
+  const panel = REC.ui.querySelector('#rcPanel'), n = ++recDrawN, rank = REC.mode === 'rank';
+  panel.textContent = '';
+  const back = rH('button', '', '◀'); back.className = 'rk-back'; back.title = '뒤로 (Esc)';
+  back.onclick = () => { if (REC.view) { REC.view = null; recDraw(); } else if (REC.tab === 'admin' && typeof ADM !== 'undefined' && ADM.sel) { ADM.sel = null; recDraw(); } else recClose(); };
+  const tabs = rH('div'); tabs.className = 'rk-tabs';
+  const list = rank ? RANK_TABS : ROOM_TABS.concat(recIsAdmin() ? [['admin', '🛠 관리']] : []);
+  const cur = rank ? REC.rtab : REC.tab;
+  list.forEach(([k, t]) => { const b = rH('button', '', t); b.className = 'rk-tab' + (k === cur && !REC.view ? ' on' : ''); b.onclick = () => { if (rank) REC.rtab = k; else REC.tab = k; REC.view = null; REC.openCert = -1; recDraw(); }; tabs.appendChild(b); });
+  const title = rH('div', '', rank ? '🏆 랭킹' : '📖 기록실'); title.className = 'rk-title';
+  const top = rH('div', '', null, [back, title, tabs]); top.className = 'rk-top'; panel.appendChild(top);
+  const body = rH('div'); body.className = 'rk-body'; panel.appendChild(body);
+  const live = () => n === recDrawN;
+  const load = (p, fn, into) => { const w = msg('불러오는 중...'); (into || body).appendChild(w); p.then((v) => { if (live()) { w.remove(); fn(v); } }).catch((err) => { if (live()) { w.textContent = '⚠️ ' + err.message; w.style.color = '#ff8a80'; } }); };
+  const say = (t) => body.appendChild(msg(t));
+  if (REC.msg) { const m = msg('⚠️ ' + REC.msg); m.style.color = '#ff8a80'; m.style.margin = '0'; panel.insertBefore(m, body); }
+  if (!FB_ON()) { say('⚠️ 아직 서버 준비 중이야'); return; }
+  if (REC.view === 'deco') { rkDeco(body); return; }
+  if (REC.view) { rkProfile(body, REC.view, load); return; }
+  if (rank) { ({ online: rkOnline, boss: rkBoss, char: rkChar })[REC.rtab || 'online'](body, load); return; }
+  if (REC.tab === 'admin') { if (!recIsAdmin()) REC.tab = 'me'; else { const w = rH('div', 'flex:1;overflow-y:auto;text-align:left'); w.className = 'rk-old'; body.style.justifyContent = 'center'; body.appendChild(w); recDrawAdmin(w, (p, fn) => load(p, fn, w)); return; } }
+  if (!REC.P) { const w = rH('div', 'margin:auto;text-align:center', null, [msg('로그인하면 내 프로필·친구·기록을 볼 수 있어!\n(게스트는 🏆 랭킹만 구경 가능)'), pill('로그인하러 가기', true, () => { recClose(); authOpen(); }, 'max-width:280px;margin:auto'), pill('🏆 랭킹 보기', false, () => { REC.mode = 'rank'; recDraw(); }, 'max-width:280px;margin:10px auto 0')]); body.appendChild(w); return; }
+  ({ me: () => rkProfileBody(body, Object.assign({ _id: REC.uid }, REC.P), true), friend: () => rkFriend(body, load), rec: () => rkRecords(body, load) })[REC.tab] ? ({ me: () => rkProfileBody(body, Object.assign({ _id: REC.uid }, REC.P), true), friend: () => rkFriend(body, load), rec: () => rkRecords(body, load) })[REC.tab]() : (REC.tab = 'me', recDraw());
+};
+recShowProfile = function (uid, pre) {
+  if (uid === REC.uid && REC.P) { REC.view = null; REC.mode = 'room'; REC.tab = 'me'; recDraw(); return; }
+  if (pre) REC.cache['u:' + uid] = { t: Date.now(), v: pre };
+  REC.view = uid; recDraw();
+};
+// 목록 + 맨 아래 내 줄
+function rkList(main, rows, mine) {
+  const sc = rH('div'); sc.className = 'rk-scroll'; main.appendChild(sc);
+  if (!rows.length) sc.appendChild(msg('아직 아무도 없어! 1등 할 기회 🔥'));
+  rows.forEach((r) => sc.appendChild(rkRow(r)));
+  if (mine) main.appendChild(rkRow(Object.assign({ me: true }, mine)));
+  return sc;
+}
+const myU = () => (REC.P ? Object.assign({ _id: REC.uid }, REC.P, { name: recName(REC.P) || (AUTH.user && AUTH.user.name) }) : null);
+const rankLabel = (u) => (u.hide ? '-' : null);
+
+// ----- 🏆 온라인 -----
+function rkOnline(body, load) {
+  const side = rH('div'); side.className = 'rk-side'; body.appendChild(side);
+  const main = rH('div'); main.className = 'rk-main'; body.appendChild(main);
+  const F = REC.ofr ? 'friend' : 'all', M = REC.om || 'rp';
+  side.appendChild(pill('🌏 전체', F === 'all', () => { REC.ofr = false; recDraw(); }));
+  side.appendChild(pill('🤝 친구만', F === 'friend', () => { if (!REC.P) { REC.msg = '친구 랭킹은 로그인해야 볼 수 있어'; recDraw(); REC.msg = ''; return; } REC.ofr = true; recDraw(); }));
+  side.appendChild(rH('div', 'display:flex;gap:6px', null, [pill('랭크 점수', M === 'rp', () => { REC.om = 'rp'; recDraw(); }, 'font-size:14px;min-height:40px'), pill('승리 수', M === 'wins', () => { REC.om = 'wins'; recDraw(); }, 'font-size:14px;min-height:40px')]));
+  const me = myU();
+  if (me) { // 내 랭크 카드
+    const t = tierOf(me.rp), nx = TIERS.slice().reverse().find((q) => q[1] > (me.rp || 0)), on = onPlayed(me);
+    const rk = rH('div', 'font-size:13px;color:' + t[2] + ';font-weight:900', on ? `${t[0]}` : '아직 온라인 기록 없음');
+    const card = box([head('내 랭크'), rH('div', 'display:flex;align-items:center;gap:10px', null, [rH('div', `background:${on ? t[2] : '#4a5078'};width:58px;height:50px;font-size:26px`, on ? t[3] : '-'), rH('div', '', null, [rH('div', 'font-size:24px;font-weight:900', (me.rp || 0) + '점'), rk])]),
+      nx && on ? rH('div', 'font-size:12px;color:#9aa4d8;margin-top:10px;font-weight:700', `${nx[0]}까지 ${nx[1] - (me.rp || 0)}점!`) : null,
+      nx && on ? rH('div', 'height:12px;border-radius:6px;background:#0e1226;border:2px solid #000;margin-top:4px', null, [rH('div', `width:${Math.round(((me.rp || 0) - t[1]) / (nx[1] - t[1]) * 100)}%;height:100%;border-radius:4px;background:${nx[2]}`)]) : null]);
+    card.children[1].firstChild.className = 'rk-badge'; side.appendChild(card);
+    REC.rkCard = on ? (c) => { rk.textContent = `${t[0]} · 전체 ${c}위`; } : null;
+  }
+  const fmt = (u) => (M === 'rp' ? [String(u.rp || 0), '랭크 점수'] : [String(u.wins || 0) + '승', `${u.losses || 0}패 · 승률 ${pct(u.wins, u.games)}%`]);
+  const mk = (u, i, mine) => { const [s, sub] = fmt(u); return { rank: i, u, ch: favChar(u), score: s, sub, badge: tierBadge(u), me: mine }; };
+  const done = (rows, myRank) => {
+    const mine = me ? mk(me, myRank, true) : null;
+    rkList(main, rows.map((u, i) => mk(u, i + 1, u._id === REC.uid)), mine);
+  };
+  if (F === 'friend') {
+    load(recUsers(REC.P.friends.slice(0, 50)), (us) => { const all = us.concat([me]).filter((u) => (M === 'rp' ? onPlayed(u) || u._id === REC.uid : true));
+      all.sort((a, b) => (M === 'rp' ? (b.rp || 0) - (a.rp || 0) : (b.wins || 0) - (a.wins || 0))); done(all.filter((u) => u._id !== REC.uid), all.findIndex((u) => u._id === REC.uid) + 1); }, main);
+    return;
+  }
+  load(recGet('rk:' + M, () => fsQuery({ from: [{ collectionId: 'users' }], orderBy: [{ field: { fieldPath: M }, direction: 'DESCENDING' }], limit: 25 }).then((r) => r.filter((u) => !u.hide && (M === 'rp' ? onPlayed(u) : u.wins > 0)).slice(0, 20))), (rows) => {
+    const i = me ? rows.findIndex((u) => u._id === REC.uid) : -1;
+    done(rows, i >= 0 ? i + 1 : 0);
+    if (i >= 0) { if (M === 'rp' && REC.rkCard) REC.rkCard(i + 1); return; }
+    if (!me || (M === 'rp' && !onPlayed(me)) || (M === 'wins' && !me.wins)) return;
+    load(recGet(`cnt:${M}:${me[M] || 0}`, () => fsCount(M, 'GREATER_THAN', me[M] || 0)), (c) => { rkSetMine(main, c + 1); if (M === 'rp' && REC.rkCard) REC.rkCard(c + 1); }, main); // 숨긴 사람도 세져서 ±1 정도 차이 날 수 있음
+  }, main);
+}
+const rkSetMine = (main, n) => { const all = main.querySelectorAll('.rk-row.me .rk-rk'); if (all.length) all[all.length - 1].textContent = String(n); }; // 맨 아래 고정 줄
+// ----- 👑 보스전 -----
+function rkBoss(body, load) {
+  const side = rH('div'); side.className = 'rk-side'; body.appendChild(side);
+  const main = rH('div'); main.className = 'rk-main'; body.appendChild(main);
+  const k = REC.bk || 0, d = REC.bd ?? 3, X = k ? 'k' + k : '', fast = REC.bfast;
+  BOSS_KINDS.slice(0, BOSS_PLAYABLE).forEach((K, i) => { const c = rH('div', '', null, [rH('img'), rH('div', '', null, [rH('b', `color:${K.col};font-size:16px;font-weight:900;display:block`, K.name), rH('span', 'font-size:12px;color:#cfd6ff;font-weight:700', `보스 ${i + 1}`)])]);
+    c.firstChild.src = bossThumb(i); c.className = 'rk-bcard' + (i === k ? ' on' : ''); c.onclick = () => { REC.bk = i; recDraw(); }; side.appendChild(c); });
+  side.appendChild(rH('div', 'display:flex;gap:5px', null, [0, 1, 2, 3].map((i) => pill(BOSS_DIFF_BASE[i].name, i === d, () => { REC.bd = i; recDraw(); }, `font-size:15px;min-height:42px;padding:0 4px;${i === d ? `background:${BD_COL[i]};color:#111` : ''}`))));
+  side.appendChild(rH('div', 'display:flex;gap:5px', null, [pill('최고 점수', !fast, () => { REC.bfast = false; recDraw(); }, 'font-size:14px;min-height:40px'), pill('최단 클리어', !!fast, () => { REC.bfast = true; recDraw(); }, 'font-size:14px;min-height:40px')]));
+  const field = X + (fast ? 'f' : 'b') + d, me = myU();
+  const mk = (u, i, mine) => ({ rank: i, u, ch: u[X + (fast ? 'fc' : 'bc') + d] ?? favChar(u), me: mine, badge: tierBadge(u),
+    score: u[field] ? (fast ? mmss(u[field]) : fmtN(u[field])) : '-', sub: u[field] ? (fast ? `${u[X + 'r' + d] || ''} · 최고 ${fmtN(u[X + 'b' + d] || 0)}점` : `${u[X + 'r' + d] || ''}${u[X + 'f' + d] ? ' · 클리어 ' + mmss(u[X + 'f' + d]) : ''}`) : '기록 없음' });
+  load(recRankQuery(field, !fast), (rows) => {
+    rows = rows.filter((u) => u[field]);
+    const i = me ? rows.findIndex((u) => u._id === REC.uid) : -1;
+    rkList(main, rows.map((u, j) => mk(u, j + 1, u._id === REC.uid)), me ? mk(me, i >= 0 ? i + 1 : 0, true) : null);
+    if (me && i < 0 && me[field]) load(recGet(`cnt:${field}:${me[field]}`, () => fsCount(field, fast ? 'LESS_THAN' : 'GREATER_THAN', me[field])), (c) => rkSetMine(main, c + 1), main);
+  }, main);
+}
+// ----- 🧑 캐릭터 -----
+function rkChar(body, load) {
+  const side = rH('div'); side.className = 'rk-side'; body.appendChild(side);
+  const main = rH('div'); main.className = 'rk-main'; body.appendChild(main);
+  const ci = REC.rc ?? 0, g = rH('div'); g.className = 'rk-grid';
+  CHARACTERS.forEach((c, i) => { if (i === BOSS_I || c.boss) return; const e = rH('div', `background-image:url("${charThumb(i)}")`); e.className = 'rk-cg' + (i === ci ? ' on' : ''); e.title = c.name; e.onclick = () => { REC.rc = i; recDraw(); }; g.appendChild(e); });
+  side.appendChild(box([g]));
+  main.appendChild(rH('div', 'display:flex;align-items:center;gap:10px;flex:none', null, [rH('div', `width:38px;height:38px;border-radius:9px;border:2px solid #000;background:#0e1226 url("${charThumb(ci)}") center/cover`), rH('div', 'font-size:20px;font-weight:900', `${charName(ci)} 장인 순위`), rH('div', 'margin-left:auto;font-size:12px;color:#9aa4d8;font-weight:700', '이 캐릭터로 이긴 판 수')]));
+  const f = `chars.${ci}.w`, me = myU(), w = (u) => ((u.chars || {})[ci] || {}).w || 0, gm = (u) => ((u.chars || {})[ci] || {}).g || 0;
+  const mk = (u, i, mine) => ({ rank: i, u, ch: ci, me: mine, score: w(u) + '승', sub: `${gm(u)}판 · 숙련도 ${mastery(gm(u))}`, badge: tierBadge(u) });
+  load(recGet('rc:' + ci, () => fsQuery({ from: [{ collectionId: 'users' }], orderBy: [{ field: { fieldPath: fp(f) }, direction: 'DESCENDING' }], limit: 25 }).then((r) => r.filter((u) => !u.hide && w(u) > 0).slice(0, 20))), (rows) => {
+    const i = me ? rows.findIndex((u) => u._id === REC.uid) : -1;
+    rkList(main, rows.map((u, j) => mk(u, j + 1, u._id === REC.uid)), me ? mk(me, i >= 0 ? i + 1 : 0, true) : null);
+    if (me && i < 0 && w(me) > 0) load(recGet(`cnt:${f}:${w(me)}`, () => fsCount(fp(f), 'GREATER_THAN', w(me))), (c) => rkSetMine(main, c + 1), main);
+  }, main);
+}
+// ----- 👤 프로필 (나 · 다른 사람) -----
+function rkProfile(body, uid, load) {
+  load(recUser(uid), (u) => { if (!u) { body.appendChild(msg('프로필을 못 찾았어')); return; } rkProfileBody(body, u, false); });
+}
+function rkProfileBody(body, P, mine) {
+  const fav = favChar(P), t = recTitleOf(P), col = recColor(P.color);
+  const left = rH('div', 'width:300px;flex:none;display:flex;flex-direction:column;gap:10px;min-height:0'); left.className = 'rk-side'; left.style.width = '300px'; body.appendChild(left);
+  const right = rH('div'); right.className = 'rk-main'; right.style.overflowY = 'auto'; body.appendChild(right);
+  let act = null;
+  if (mine) { act = pill('✏️ 꾸미기', false, () => { REC.view = 'deco'; recDraw(); }, 'width:auto;min-height:42px;font-size:15px;background:#5aa8ff;color:#fff;margin-left:auto'); }
+  else if (REC.P) {
+    if (REC.P.friends.includes(P._id)) act = pill('🤝 친구', true, () => {}, 'width:auto;min-height:42px;font-size:15px;margin-left:auto;cursor:default');
+    else if (REC.sent.includes(P._id)) act = pill('📨 신청함', false, () => {}, 'width:auto;min-height:42px;font-size:14px;margin-left:auto');
+    else act = pill('🤝 친구 신청', false, () => recFriendSend(P).then(() => { recToast(`📨 ${recName(P)}님에게 친구 신청을 보냈어!`, '#7dff9a'); recDraw(); }).catch((err) => { REC.msg = err.message; recDraw(); REC.msg = ''; }), 'width:auto;min-height:42px;font-size:14px;background:#2fbf71;color:#fff;margin-left:auto');
+  }
+  left.appendChild(rH('div', 'display:flex;gap:10px;align-items:center;flex:none', null, [rH('div', `width:60px;height:60px;border-radius:10px;border:3px solid #000;background:#0e1226 url("${charThumb(fav)}") center/cover;flex:none`),
+    rH('div', 'min-width:0', null, [rH('div', `font-size:24px;font-weight:900;text-shadow:0 3px 0 #000;color:${col};white-space:nowrap;overflow:hidden;text-overflow:ellipsis`, recEmoji(P.emoji) + ' ' + recName(P)), rH('div', 'font-size:13px;color:#9aa4d8;font-weight:700', '@' + (P.id || '?'))]), act]));
+  const card = rH('div', `flex:1;min-height:230px;border-radius:14px;border:3px solid #000;padding:10px;position:relative;background:linear-gradient(160deg,${col},#1b1f3d);box-shadow:0 4px 0 rgba(0,0,0,.4)`, null, [
+    rH('div', `position:absolute;inset:10px 10px 66px;border-radius:10px;border:3px solid #000;background:radial-gradient(circle at 50% 40%,#3a4170,#0e1226) ;display:grid;place-items:center;overflow:hidden`, null, [rH('img', 'max-width:94%;max-height:96%;object-fit:contain')]),
+    rH('div', 'position:absolute;left:10px;right:10px;bottom:10px;height:50px;border-radius:10px;border:3px solid #000;background:rgba(0,0,0,.65);display:flex;align-items:center;padding:0 12px;gap:8px', null, [
+      rH('div', 'min-width:0', null, [rH('div', 'font-size:18px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis', recName(P)), rH('div', `font-size:12px;font-weight:900;color:${t ? t[2] : '#9aa4d8'}`, t ? t[1] : '칭호 없음')]),
+      rH('div', 'margin-left:auto;font-size:12px;font-weight:900;white-space:nowrap', '대표: ' + charName(fav))])]);
+  card.querySelector('img').src = charThumb(fav); left.appendChild(card);
+  // 오른쪽 위: 랭크 · 전적 · 보스전 최고
+  const on = onPlayed(P), tc = tierOf(P.rp), tb = tierOf(Math.max(P.rpBest || 0, P.rp || 0));
+  const bdg = (c, e) => { const d = rH('div', `background:${c};width:54px;height:46px;font-size:24px;margin:auto`, e); d.className = 'rk-badge'; return d; };
+  let best = null; const RANK_ORDER = ['GOAT', 'SSS', 'SS', 'S', 'A', 'B', 'C', 'D', 'F'];
+  for (let k = 0; k < BOSS_PLAYABLE; k++) for (let d = 0; d < 4; d++) { const X = k ? 'k' + k : '', r = P[X + 'r' + d]; if (r && (!best || RANK_ORDER.indexOf(r) < RANK_ORDER.indexOf(best.r) || (r === best.r && d > best.d))) best = { r, k, d }; }
+  const stat = (kids, css = '') => { const b = box(kids, css); b.classList.add('rk-stat'); return b; };
+  right.appendChild(rH('div', 'display:flex;gap:10px;flex-wrap:wrap;flex:none', null, [
+    stat([head('온라인 랭크'), on ? rH('div', 'display:flex;justify-content:center;gap:20px', null, [rH('div', '', null, [bdg(tc[2], tc[3]), rH('div', 'font-size:11px;color:#9aa4d8;font-weight:900;margin-top:3px', '현재'), rH('div', 'font-size:22px;font-weight:900', String(P.rp || 0))]), rH('div', '', null, [bdg(tb[2], tb[3]), rH('div', 'font-size:11px;color:#9aa4d8;font-weight:900;margin-top:3px', '최고'), rH('div', 'font-size:22px;font-weight:900', String(Math.max(P.rpBest || 0, P.rp || 0)))])]) : rH('div', 'color:#9aa4d8;font-weight:900;margin-top:14px', '아직 온라인 기록 없음')]),
+    stat([head('전적'), rH('div', 'font-size:30px;font-weight:900;margin-top:4px', `${P.wins || 0}승 ${P.losses || 0}패`), rH('div', 'font-size:13px;font-weight:900;color:#ffd23f', `승률 ${pct(P.wins, P.games)}% · 최고 연승 ${P.bestStreak || 0}`)]),
+    stat([head('보스전 최고'), best ? rH('div', 'font-size:32px;font-weight:900;color:#ffd23f;margin-top:4px', best.r) : rH('div', 'color:#9aa4d8;font-weight:900;margin-top:14px', '기록 없음'), best ? rH('div', `font-size:12px;font-weight:900;color:${BOSS_KINDS[best.k].col}`, `${BOSS_KINDS[best.k].name.replace('대선사 ', '').replace('마왕 ', '')} ${BOSS_DIFF_BASE[best.d].name}`) : null], 'flex:.7')]));
+  // 숙련도
+  const ch = P.chars || {}; let sum = 0, played = 0;
+  const grid = rH('div', 'display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-top:10px');
+  CHARACTERS.forEach((c, i) => { if (i === BOSS_I || c.boss) return; const gm = (ch[i] || {}).g || 0, lv = mastery(gm); sum += lv; if (gm) played++;
+    const e = rH('div', `background-image:url("${charThumb(i)}");cursor:default;${lv ? '' : 'filter:grayscale(1) brightness(.5)'}`, null, [rH('div', `background:${lv >= 7 ? '#ffd23f' : lv >= 4 ? '#7ae7ff' : lv ? '#cfd6ff' : '#555'}`, lv ? String(lv) : '-')]);
+    e.className = 'rk-cg'; e.firstChild.className = 'rk-lv'; e.title = `${c.name} · ${gm}판 ${(ch[i] || {}).w || 0}승 · 숙련도 ${lv}`; grid.appendChild(e); });
+  const sb = rH('span', 'background:linear-gradient(#b65aff,#5a2ad8);color:#fff;width:58px;font-size:20px', String(sum)); sb.className = 'rk-badge';
+  right.appendChild(box([rH('div', 'display:flex;align-items:center;gap:8px', null, [head('캐릭터 숙련도'), rH('div', 'font-size:12px;color:#9aa4d8;font-weight:700;margin-bottom:6px', `${played} / ${grid.children.length}명 플레이 · 판 수가 쌓이면 숫자가 올라가`), rH('div', 'margin-left:auto;display:flex;align-items:center;gap:6px;font-weight:900', null, [rH('span', 'font-size:12px;color:#9aa4d8', '합계'), sb])]), grid], 'flex:none'));
+  if (mine) { const pend = REC.dirty || Object.keys(REC.statsQ).length; right.appendChild(rH('div', `font-size:12px;font-weight:700;color:${pend ? '#ffd84d' : '#7dff9a'};flex:none`, pend ? '⏳ 아직 서버에 못 올린 기록이 있어 (인터넷 되면 자동으로 올라가)' : '☁️ 서버에 저장됨')); }
+}
+// ----- ✏️ 꾸미기 (대표 캐릭터 + 예전 꾸미기) -----
+function rkDeco(body) {
+  const P = REC.P; if (!P) { REC.view = null; recDraw(); return; }
+  const w = rH('div', 'flex:1;overflow-y:auto;text-align:left'); w.className = 'rk-old'; body.style.justifyContent = 'center'; body.appendChild(w);
+  const g = rH('div', 'display:grid;grid-template-columns:repeat(7,1fr);gap:8px'), fav = favChar(P);
+  CHARACTERS.forEach((c, i) => { if (i === BOSS_I || c.boss) return; const e = rH('div', `background-image:url("${charThumb(i)}")`); e.className = 'rk-cg' + (i === fav ? ' on' : ''); e.title = c.name; e.onclick = () => { P.fav = i; recChanged(); recDraw(); }; g.appendChild(e); });
+  w.appendChild(box([head('🧑 대표 캐릭터 (프로필 카드·랭킹에 나와)'), g]));
+  recDrawDeco(w);
+}
+// ----- 🤝 친구 -----
+function rkFriend(body, load) {
+  const P = REC.P;
+  const side = rH('div'); side.className = 'rk-side'; body.appendChild(side);
+  const main = rH('div'); main.className = 'rk-main'; body.appendChild(main);
+  side.appendChild(pill('➕ 친구 추가', !!REC.fadd, () => { REC.fadd = !REC.fadd; REC.freq = false; recDraw(); }, `min-height:60px;font-size:20px;${REC.fadd ? '' : 'background:#2fbf71;color:#fff'}`));
+  if (REC.fadd) {
+    const inp = rH('input'); inp.className = 'rk-in'; inp.placeholder = '친구 아이디'; inp.maxLength = 12; inp.autocapitalize = 'off';
+    const fmsg = rH('div', 'font-size:13px;min-height:16px;color:#ff8a80;font-weight:700');
+    const go = () => { fmsg.style.color = '#9aa4d8'; fmsg.textContent = '찾는 중...'; recFindId(inp.value).then((u) => recShowProfile(u._id, u)).catch((err) => { fmsg.style.color = '#ff8a80'; fmsg.textContent = err.message; }); };
+    inp.onkeydown = (e) => { if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); go(); } };
+    side.appendChild(box([head('아이디로 찾기'), rH('div', 'display:flex;gap:6px', null, [inp, pill('찾기', true, go, 'width:auto;min-height:44px;font-size:15px')]), fmsg]));
+    setTimeout(() => inp.focus(), 30);
+  }
+  const rq = pill('', !!REC.freq, () => { REC.freq = !REC.freq; REC.fadd = false; recDraw(); }, 'justify-content:space-between');
+  rq.append(rH('span', '', '📨 받은 신청'), rH('span', `background:${REC.reqs.length ? '#ff3b3b' : '#4a5078'};color:#fff;border:2px solid #000;border-radius:10px;padding:0 9px;font-size:15px`, String(REC.reqs.length)));
+  side.appendChild(rq);
+  side.appendChild(box([head('내 아이디'), rH('div', 'font-size:22px;font-weight:900', P.id || (AUTH.user && AUTH.user.id) || '?'), rH('div', 'font-size:12px;color:#9aa4d8;font-weight:700;margin-top:4px', '친구한테 이 아이디를 알려 줘')], 'margin-top:auto'));
+  if (REC.freq) {
+    main.appendChild(head(`받은 친구 신청 ${REC.reqs.length}개`));
+    if (!REC.reqs.length) { main.appendChild(msg('받은 신청이 없어')); return; }
+    const sc = rH('div'); sc.className = 'rk-scroll'; main.appendChild(sc);
+    REC.reqs.forEach((r) => { const ans = (ok) => recFriendAnswer(r, ok).then(() => { recToast(ok ? `🤝 ${r.fromName}님과 친구가 됐어!` : '친구 신청을 거절했어', '#7dff9a'); recDraw(); }).catch((err) => { REC.msg = err.message; recDraw(); REC.msg = ''; });
+      const row = rkRow({ rank: 0, u: { _id: r.from, name: r.fromName, id: r.fromId }, ch: 0, score: '', sub: '' });
+      row.children[0].textContent = '📨'; row.children[1].style.display = 'none'; row.children[4] && row.children[4].remove();
+      row.appendChild(pill('수락', true, (e) => { e.stopPropagation(); ans(true); }, 'width:80px;min-height:42px;font-size:15px;background:#2fbf71;color:#fff'));
+      row.appendChild(pill('거절', false, (e) => { e.stopPropagation(); ans(false); }, 'width:80px;min-height:42px;font-size:15px'));
+      sc.appendChild(row); });
+    return;
+  }
+  main.appendChild(head(`친구 ${P.friends.length}명`));
+  if (!P.friends.length) { main.appendChild(msg('아직 친구가 없어!\n➕ 친구 추가에서 아이디로 찾거나, 🏆 랭킹에서 이름을 눌러 신청해 봐')); return; }
+  load(recUsers(P.friends.slice(0, 50)), (us) => {
+    us.sort((a, b) => (b.upd || 0) - (a.upd || 0));
+    const sc = rH('div'); sc.className = 'rk-scroll'; main.appendChild(sc);
+    us.forEach((u) => { const row = rkRow({ rank: 0, u, ch: favChar(u), score: onPlayed(u) ? String(u.rp || 0) : `${u.wins || 0}승`, sub: onPlayed(u) ? '랭크 점수' : `${u.losses || 0}패`, badge: tierBadge(u) });
+      row.children[0].remove(); row.style.paddingLeft = '8px';
+      row.insertBefore(rH('div', `font-size:13px;font-weight:900;white-space:nowrap;color:${ago(u.upd).includes('지금') ? '#7dff9a' : '#9aa4d8'}`, ago(u.upd)), row.children[2]);
+      sc.appendChild(row); });
+  }, main);
+}
+// ----- 📜 기록 (인증서 + 최근 경기 + 이번 주 인기 캐릭터) -----
+function rkRecords(body, load) {
+  const P = REC.P;
+  const main = rH('div'); main.className = 'rk-main'; main.style.flex = '1.4'; body.appendChild(main);
+  const side = rH('div'); side.className = 'rk-side'; side.style.width = '260px'; body.appendChild(side);
+  const sc = rH('div'); sc.className = 'rk-scroll'; main.appendChild(sc);
+  sc.appendChild(head('📜 보스전 인증서 (최근 20개 · 누르면 점수 내역)'));
+  const C = P.certs || [];
+  if (!C.length) sc.appendChild(msg('아직 보스전 인증서가 없어!\n보스전을 하면 여기 자동으로 저장돼'));
+  C.forEach((c, i) => {
+    const K = BOSS_KINDS[c.k || 0] || BOSS_KINDS[0], dt = new Date(c.t);
+    const dp = rH('div', `min-height:34px;width:62px;font-size:14px;background:${BD_COL[c.d] || '#888'};color:#111;flex:none`, BOSS_DIFF_BASE[c.d] ? BOSS_DIFF_BASE[c.d].name : '?'); dp.className = 'rk-pill';
+    const row = rH('div', 'padding-left:12px', null, [rH('div', `width:118px;font-weight:900;font-size:15px;color:${K.col};flex:none`, K.name), dp,
+      rH('div', `width:62px;text-align:center;font-size:24px;font-weight:900;color:${c.win ? '#ffd23f' : '#ff8a80'};text-shadow:0 2px 0 #000;flex:none`, c.rank),
+      rH('div', '', null, [document.createTextNode(fmtN(c.score)), rH('small', '', c.win ? '클리어 ' + mmss(c.sec) : '패배')]),
+      rH('div', 'margin-left:auto;font-size:13px;color:#cfd6ff;font-weight:900', `${dt.getMonth() + 1}/${dt.getDate()}`)]);
+    row.className = 'rk-row'; row.children[3].className = 'rk-sc'; row.children[3].style.textAlign = 'left';
+    row.onclick = () => { REC.openCert = REC.openCert === i ? -1 : i; recDraw(); };
+    sc.appendChild(row);
+    if (REC.openCert === i) {
+      const det = box([rH('div', 'font-size:13px;color:#cfd6ff;font-weight:700;margin-bottom:4px', `파티: ${(c.party || []).map(charName).join(' · ')}${c.why ? ' · ' + c.why : ''}`),
+        ...(c.parts || []).map((q) => rH('div', 'display:flex;font-size:13px;font-weight:700', null, [rH('span', '', q[0]), rH('span', 'margin-left:auto;color:#ffd84d', (q[1] < 0 ? '-' : '+') + fmtN(Math.abs(q[1])))])),
+        rH('div', 'display:flex;font-size:14px;font-weight:900;border-top:2px solid #000;margin-top:4px;padding-top:4px', null, [rH('span', '', `난이도 배율 × ${c.mul}`), rH('span', 'margin-left:auto;color:#ffd84d', fmtN(c.score) + '점')])], 'flex:none');
+      sc.appendChild(det);
+    }
+  });
+  sc.appendChild(head('🏐 최근 경기'));
+  const hs = (P.hist || []).slice(0, 8);
+  if (!hs.length) sc.appendChild(msg('아직 기록 없음 (같이 플레이는 누가 나인지 몰라서 안 들어가)'));
+  hs.forEach((g) => { const row = rH('div', 'min-height:48px;padding-left:12px;gap:12px;cursor:default', null, [rH('b', `color:${g.win ? '#7dff9a' : '#ff8a80'};font-size:18px;width:28px;flex:none`, g.win ? '승' : '패'),
+    rH('div', `width:36px;height:36px;border-radius:8px;border:2px solid #000;background:#0e1226 url("${charThumb(g.c)}") center/cover;flex:none`), rH('span', 'font-weight:900', 'vs'),
+    rH('div', `width:36px;height:36px;border-radius:8px;border:2px solid #000;background:#0e1226 url("${g.o >= 0 ? charThumb(g.o) : ''}") center/cover;flex:none`),
+    rH('span', 'font-weight:900;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis', `${g.m}${g.on ? ' · ' + g.on : ''} · ${g.s}${g.rp ? ' · ' + g.rp + '점' : ''}`)]); row.className = 'rk-row'; sc.appendChild(row); });
+  const st = box([head('📊 이번 주 인기 캐릭터')], 'flex:1'); side.appendChild(st);
+  const wk = recWeek();
+  load(recGet('s:' + wk, async () => { const j = await fsReq('GET', '/stats/' + wk); return j ? fsObj(j.fields) : {}; }), (S) => {
+    const rows = CHARACTERS.map((c, i) => ({ i, p: S['p' + i] || 0, w: S['w' + i] || 0 })).filter((r) => r.p > 0).sort((a, b) => b.p - a.p);
+    const total = rows.reduce((a, r) => a + r.p, 0);
+    if (!total) { st.appendChild(rH('div', 'font-size:13px;color:#9aa4d8;font-weight:700', '이번 주 기록이 아직 없어!')); return; }
+    rows.slice(0, 7).forEach((r) => st.appendChild(rH('div', 'display:flex;align-items:center;gap:8px;margin-top:9px', null, [rH('div', `width:34px;height:34px;border-radius:8px;border:2px solid #000;background:#0e1226 url("${charThumb(r.i)}") center/cover;flex:none`),
+      rH('div', 'flex:1;min-width:0', null, [rH('div', 'font-size:14px;font-weight:900', charName(r.i)), rH('div', 'height:9px;border-radius:5px;background:#0e1226;border:2px solid #000;margin-top:2px', null, [rH('div', `width:${pct(r.p, total)}%;height:100%;background:#ff8a3d;border-radius:3px`)])]),
+      rH('b', 'font-size:14px', pct(r.p, total) + '%')])));
+    st.appendChild(rH('div', 'font-size:11px;color:#9aa4d8;font-weight:700;margin-top:10px', `이번 주 선택 ${total}번 · 승률 1위: ${(() => { const e = rows.filter((r) => r.p >= 5).sort((a, b) => b.w / b.p - a.w / a.p)[0]; return e ? `${charName(e.i)} ${pct(e.w, e.p)}%` : '5판 이상 없음'; })()}`));
+  }, st);
+}
+// 랭킹 판(메인 화면)·K 키·로그인 창 버튼 = 랭킹 화면, 메뉴 '📖 기록실' = 기록실

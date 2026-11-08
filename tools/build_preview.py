@@ -14,7 +14,7 @@ def rep(m):
 js = re.sub(r"(['\"])(assets/[^'\"]+\.png)\1", rep, js)
 html = open(os.path.join(root, 'index.html'), encoding='utf-8').read()
 def scr(m): # 로컬 <script src>는 전부 안에 넣음 (안 그러면 미리보기에서 온라인 버튼이 안 됨)
-    src = m.group(1)
+    src = m.group(1).split('?')[0] # game.js?v=10.7.1 → game.js
     code = js if src == 'game.js' else open(os.path.join(root, src), encoding='utf-8').read()
     return '<script>\n' + code.replace('</script', '<\\/script') + '\n</script>'
 html = re.sub(r'<script[^>]*src=["\']([^"\':]+)["\'][^>]*>\s*</script>', scr, html)

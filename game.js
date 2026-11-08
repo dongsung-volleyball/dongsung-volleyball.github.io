@@ -1,5 +1,5 @@
 // ===== 설정 (여기만 바꾸면 돼요) =====
-const GAME_VERSION = 'v10.7'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
+const GAME_VERSION = 'v10.7.1'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
 const CONFIG = {
   WIN_SCORE: 15,          // 몇 점 내면 이기는지
   FPS: 25,                // 1초에 몇 번 움직이는지 (원작 보통 속도 25)
@@ -8405,7 +8405,7 @@ function netSend(m) { // 방장: 모두에게 / 참가자: 방장에게
 }
 function netRelay(m, from) { try { NET.conns.forEach((e) => { if (e.slot !== from && netAlive(e.c) && !e.pending) e.c.send(m); }); } catch (err) { /* 무시 */ } }
 const netLeftMsg = () => (NET.n === 2 ? '상대가 나갔어' : '누가 나가서 끝났어');
-const netVerMsg = '게임 버전이 달라! 모두 새로고침(Ctrl+F5) 해 줘';
+const netVerMsg = '게임 버전이 달라! 모두 새로고침 해 줘\n(컴퓨터 Ctrl+F5 · 맥 Cmd+Shift+R · 폰은 주소창 새로고침)';
 // v7.18 닉네임·방 이름: 브라우저에 저장(localStorage). 방장이 모두의 이름을 모아서(NET.names[자리]) 다시 뿌려 줌
 const netClean = (v, n) => String(v || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
 function myName() { try { return netClean(localStorage.getItem('dsvb_name'), 8); } catch (err) { return ''; } }
@@ -8601,6 +8601,7 @@ function netHost() {
   netLobbyMsg('방 만드는 중...');
   const peer = (NET.peer = new Peer(NET_PREFIX + NET.code, netPeerOpts()));
   peer.on('open', () => { netHostMsg(); netAiBox(); netBeaconStart(0); });
+  peer.on('disconnected', () => { if (NET.peer === peer && !peer.destroyed) setTimeout(() => { try { if (NET.peer === peer && !peer.destroyed && peer.disconnected) peer.reconnect(); } catch (err) { /* 무시 */ } }, 800); }); // (v10.7.1)
   peer.on('error', (e) => { if (e.type === 'unavailable-id') netHost(); else if (e.type !== 'peer-unavailable') netLobbyMsg(netErr(e)); });
   peer.on('connection', (c) => {
     if (NET.on) { // 경기 중: AI가 하고 있는 자리가 있으면 그 자리로 들어옴 (나갔던 자리 먼저)
@@ -8617,9 +8618,10 @@ function netHost() {
       c.on('open', () => { e.open = true; e.qT = performance.now(); NET.rejoinQ.push(e); });
       return;
     }
+    NET.conns.filter((x) => !x.open && performance.now() - (x.t0 || 0) > 4000).forEach((x) => { NET.conns = NET.conns.filter((y) => y !== x); try { x.c.close(); } catch (err) { /* 무시 */ } }); // (v10.7.1) 연결 실패해서 남은 자리 정리
     if (NET.conns.length >= netNeed() - 1) { c.on('open', () => { c.send({ t: 'full' }); setTimeout(() => c.close(), 500); }); return; } // 꽉 참
     let slot = NET.kind === 'boss' ? 2 : 1; while (NET.conns.some((e) => e.slot === slot)) slot++; // 빈 자리 (1 = 오른쪽1, 2 = 왼쪽2, 3 = 오른쪽2 / 보스전은 2·3)
-    const e = { c, slot, open: false }; NET.conns.push(e);
+    const e = { c, slot, open: false, t0: performance.now() }; NET.conns.push(e);
     c.on('data', (m) => netOnData(m, slot));
     c.on('close', () => netLost(e));
     c.on('error', () => netLost(e));
@@ -8662,19 +8664,62 @@ function netLost(e) { // 누가 연결이 끊김
   NET.conns = NET.conns.filter((x) => x !== e); try { e.c.close(); } catch (err) { /* 무시 */ }
   if (NET.lobby && NET.peer) netHostCount(); // 대기 중이면 자리만 비움
 }
-function netJoin(code) {
+// (v10.7.1) 참가 연결 — 아이폰·맥(사파리)에서 '연결하는 중...'에서 멈추던 문제
+// 1차: 보통 연결 (직접 → 안 되면 중계) / 12초 안에 안 되면 2차: 중계(TURN) 서버만 써서 새로 연결 / 그래도 안 되면 실패 이유 코드 표시
+const NET_JOIN_T = [12000, 15000];
+function netBrowser() {
+  const u = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod/.test(u) || (/Macintosh/.test(u) && navigator.maxTouchPoints > 1)) return /CriOS/.test(u) ? 'iOS-Chrome' : /KAKAOTALK/i.test(u) ? 'iOS-Kakao' : 'iOS-Safari';
+  if (/Macintosh/.test(u)) return /Chrome\//.test(u) ? 'Mac-Chrome' : /Firefox\//.test(u) ? 'Mac-Firefox' : 'Mac-Safari';
+  if (/Android/.test(u)) return /SamsungBrowser/.test(u) ? 'Android-Samsung' : /KAKAOTALK/i.test(u) ? 'Android-Kakao' : 'Android-Chrome';
+  return /Edg\//.test(u) ? 'Edge' : /Chrome\//.test(u) ? 'Chrome' : /Firefox\//.test(u) ? 'Firefox' : 'etc';
+}
+function netJoin(code, tryN = 0) {
   if (!/^\d{4}$/.test(code)) { netLobbyMsg('방 코드는 숫자 4자리야!'); return; }
   if (!window.Peer) { netLobbyMsg('온라인 기능을 못 불러왔어 😢\n인터넷 연결을 확인하고 새로고침 해 줘'); return; }
-  netCleanup(); NET.full = false; netLobbyMsg('연결하는 중...');
-  const peer = (NET.peer = new Peer(netPeerOpts()));
+  const id = (NET.joinId = (NET.joinId || 0) + 1); // 이번 시도 번호 (옛 시도에서 늦게 온 이벤트는 무시)
+  netCleanup(); NET.full = false;
+  const head = tryN ? '🔁 다른 길(중계 서버)로 다시 연결하는 중... (2/2)\n' : '연결하는 중...\n';
+  const show = (t) => netLobbyMsg(head + t);
+  const opts = netPeerOpts();
+  if (tryN) opts.config = Object.assign({}, opts.config, { iceTransportPolicy: 'relay' });
+  let c = null, timer = 0, poll = 0, srv = false, ok = false; // ok = 한 번이라도 연결됐음
+  const peer = (NET.peer = new Peer(opts));
+  const alive = () => NET.joinId === id && NET.peer === peer;
+  const stop = () => { clearTimeout(timer); clearInterval(poll); };
+  const diag = () => { const pc = c && c.peerConnection; return `[${tryN + 1}차 srv:${srv ? 'ok' : 'x'} ice:${pc ? pc.iceConnectionState : '-'} pc:${pc ? pc.connectionState || '-' : '-'} dc:${c && c.dataChannel ? c.dataChannel.readyState : '-'} ${netBrowser()}]`; };
+  const next = () => { // 이번 시도 실패 → 2차로, 2차도 실패면 이유 표시
+    if (!alive()) return; stop();
+    if (tryN === 0) { netJoin(code, 1); return; }
+    const d = diag(); netCleanup();
+    netLobbyMsg('연결 실패 😢 참여 버튼을 다시 눌러 줘\n와이파이 ↔ 데이터를 바꿔 보는 것도 좋아\n' + d);
+    try { console.warn('[온라인] 참가 실패', d); } catch (err) { /* 무시 */ }
+  };
+  show('① 서버 연결 중...');
   peer.on('open', () => {
-    const c = (NET.conn = peer.connect(NET_PREFIX + code, { reliable: true }));
-    c.on('open', () => { try { c.send({ t: 'name', name: myName() || '' }); } catch (err) { /* 무시 */ } });
-    c.on('data', (m) => netOnData(m, 0));
-    c.on('close', () => { if (NET.full) return; if (NET.on || NET.lobby) netEnd(NET.on ? '방장이 나가서 끝났어' : '방이 닫혔어'); });
-    c.on('error', () => { if (NET.on) netEnd('연결이 끊겼어'); });
+    if (!alive()) return; srv = true;
+    c = (NET.conn = peer.connect(NET_PREFIX + code, { reliable: true }));
+    show('① 서버 ✔  ② 방장 찾는 중...');
+    poll = setInterval(() => {
+      if (!alive() || !c) { stop(); return; }
+      if (ok) return;
+      const pc = c.peerConnection; if (!pc) return;
+      const ice = pc.iceConnectionState;
+      if (ice === 'failed') { next(); return; } // 길이 막힘 → 기다리지 말고 바로 다음 방법
+      if (pc.remoteDescription) show(`① 서버 ✔  ② 방장 찾음 ✔  ③ 길 뚫는 중... (${ice})`);
+    }, 500);
+    c.on('open', () => { if (!alive()) return; ok = true; stop(); show('① ✔  ② ✔  ③ 연결 성공! 방장 대답 기다리는 중...'); try { c.send({ t: 'name', name: myName() || '' }); } catch (err) { /* 무시 */ } });
+    c.on('data', (m) => { if (NET.conn === c) netOnData(m, 0); });
+    c.on('close', () => { if (NET.conn !== c) return; if (NET.full) return; if (!ok) { next(); return; } if (NET.on || NET.lobby) netEnd(NET.on ? '방장이 나가서 끝났어' : '방이 닫혔어'); });
+    c.on('error', () => { if (NET.conn !== c) return; if (NET.on) netEnd('연결이 끊겼어'); else if (!ok) next(); });
   });
-  peer.on('error', (e) => netLobbyMsg(netErr(e)));
+  peer.on('error', (e) => {
+    if (!alive()) return;
+    if (e.type === 'peer-unavailable') { stop(); netLobbyMsg(netErr(e)); return; }
+    if (!ok && (e.type === 'webrtc' || e.type === 'negotiation-failed')) { next(); return; }
+    stop(); netLobbyMsg(netErr(e) + '\n' + diag());
+  });
+  timer = setTimeout(() => { if (alive() && !ok) next(); }, NET_JOIN_T[tryN]);
 }
 
 // ----- 열린 방 목록 (v7.16) -----
@@ -8789,6 +8834,9 @@ function netApplyCtl(list) { // 모두 같은 프레임에: 사람 ↔ AI
   }
 }
 function netSetMode() { if (NET.kind === 'boss') setBoss(true); else { setBoss(false); setDuo(NET.n === 4); } }
+addEventListener('visibilitychange', () => { // (v10.7.1) 화면으로 돌아왔는데 서버 연결이 끊겨 있으면 다시 붙기 (아이폰)
+  const p = NET.peer; if (document.visibilityState === 'visible' && p && !p.destroyed && p.disconnected) try { p.reconnect(); } catch (err) { /* 무시 */ }
+});
 addEventListener('visibilitychange', () => { // 참가자가 탭을 바꾸면 바로 AI한테 넘김
   if (NET.on && !NET.host && document.visibilityState === 'hidden') netSend({ t: 'away' });
 });

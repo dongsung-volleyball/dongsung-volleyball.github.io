@@ -24,7 +24,7 @@
 </script>
 <script>
 // ===== 설정 (여기만 바꾸면 돼요) =====
-const GAME_VERSION = 'v9.2.1'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
+const GAME_VERSION = 'v9.3'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
 const CONFIG = {
   WIN_SCORE: 15,          // 몇 점 내면 이기는지
   FPS: 25,                // 1초에 몇 번 움직이는지 (원작 보통 속도 25)
@@ -12297,7 +12297,7 @@ const BOSS_KINDS = [
   { name: '마왕 이사장', title: "'절대 통제자' 마왕 이사장", col: '#ff5a8a', glow: '255,42,106', win: '🎓 절대 통제자를 쓰러뜨리고 무사히 졸업했다!', exName: '자퇴 권고', exHan: '自退 勸告' },
   { name: '대선사 주지스님', title: "'삼도천의 수문장' 대선사 주지스님", col: '#ffb040', glow: '255,176,64', win: '🪷 삼도천을 건너 깨달음을 얻었다!', exName: '열반 무아지경', exHan: '無我之境',
     sh: ['order', 'phys', null], // 페이즈별 쉴드 (null = 속성이 계속 바뀜)
-    goat: { partyHp: 4, exMul: 1.5, gapMul: 0.85 }, // 고트 추가 조정 (목표: 강한 AI 파티 승률 5% 이하)
+    goat: { partyHp: 4, exMul: 1.85, gapMul: 0.75 }, // 고트 추가 조정 (목표: 강한 AI 파티 승률 5% 이하, v9.3 AI 피하기 좋아져서 다시 맞춤)
     over: [null, null, { partyHp: 14 }, null], // 헬 파티 HP 18 → 14
     mul: [[1.3, 1.3, 1.15], [1.35, 1.35, 1.2], [1.4, 1.4, 1.25], [1.45, 1.45, 1.3]], // 난이도별 [HP, 쉴드, 공격력] 배율 (이사장 기준)
     phase: [null, { name: '목탁 소리의 경고', sub: '자비 & 수행', col: '#ffb040' }, { name: '사천왕의 진노', sub: '번뇌 & 업보', col: '#ff6a2a' }, { name: '열반의 문', sub: '윤회 & 무아', col: '#ffe680' }],
@@ -12527,12 +12527,12 @@ function pxTick(D) {
 }
 function pxStep(o, D, party) {
   const B = BOSS, X = B.px, P = o.P, w = o.warn, t = o.t, fire = t === w, after = t - w;
-  const hz = (x0, x1, left, kind) => X.hz.push({ x0, x1, left, kind });
+  const hz = (x0, x1, left, kind, tight) => X.hz.push({ x0, x1, left, kind, tight });
   switch (P.type) {
     case 'shock': { // 네트 쪽에서 맨 뒤까지 바닥을 훑는 충격파 (땅에 있으면 맞음)
-      if (t < w) { hz(20, NET_X, w - t, 'ground'); break; }
+      if (t < w) break;
       const x = NET_X - after * 12; o.d.x = x;
-      hz(x - 30, x + 6, 0, 'ground');
+      hz(x - 40, x + 6, 0, 'ground');
       const hit = party.filter((p) => pxOnGround(p) && Math.abs(p.x - x) < 14 && !p.freezeT); if (hit.length) pxHurt(o, hit, 25, '쿵!');
       if (x < 20) o.done = true; break; }
     case 'homing': {
@@ -12574,10 +12574,10 @@ function pxStep(o, D, party) {
       }
       if (o.d.objs.every((q) => q.land && q.life <= 0)) o.done = true; break; }
     case 'slam': if (t <= w) hz(o.d.x0, o.d.x1, w - t, 'any'); if (fire) { const hit = party.filter((p) => pxIn(p, o.d.x0, o.d.x1) && p.y > P_GROUND_Y - 40); shake = 14; bossSfx('drop'); effects.push({ x: 110, y: 268, t: 9 }); if (hit.length) pxHurt(o, hit, 25, '연화대 강타!'); } if (after > 12) o.done = true; break;
-    case 'hlaser': { const lv = o.d.lv || ['low'], k = Math.min(lv.length - 1, Math.max(0, Math.floor((t - w + 20) / 20))), cur = lv[k], f0 = w + k * 20; o.d.cur = cur; o.d.f0 = f0;
+    case 'hlaser': { const lv = o.d.lv || ['low'], k = Math.min(lv.length - 1, Math.max(0, Math.floor((t - w + 30) / 30))), cur = lv[k], f0 = w + k * 30; o.d.cur = cur; o.d.f0 = f0;
       if (t <= f0) hz(20, NET_X, f0 - t, cur === 'low' ? 'ground' : 'air');
       if (t === f0) { const hit = party.filter((p) => (cur === 'low' ? pxOnGround(p) : p.y < P_GROUND_Y - 22)); bossSfx('zap'); shake = 8; if (hit.length) pxHurt(o, hit, 25, '레이저!'); }
-      if (t > w + (lv.length - 1) * 20 + 10) o.done = true; break; }
+      if (t > w + (lv.length - 1) * 30 + 10) o.done = true; break; }
     case 'cols': if (t <= w) o.d.cols.forEach((x) => hz(x - 10, x + 10, w - t, 'any'));
       if (fire) { const hit = party.filter((p) => o.d.cols.some((x) => Math.abs(p.x - x) < 10)); bossSfx('zap'); shake = 8; if (hit.length) pxHurt(o, hit, 25, '빔 명중!'); } if (after > 12) o.done = true; break;
     case 'tiles': if (t > w) for (const p of party) if (pxOnGround(p) && o.d.xs.some((x) => Math.abs(p.x - x) < 14)) { p.slowT = Math.max(p.slowT || 0, 6); p.slowK = 0.5; } if (t > w + o.dur) o.done = true; break;
@@ -12585,10 +12585,10 @@ function pxStep(o, D, party) {
       party.forEach((p) => { if (p.pushTo !== undefined) { p.x += (p.pushTo - p.x) * 0.4; if (Math.abs(p.x - p.pushTo) < 1) delete p.pushTo; } });
       if (after > 10) { party.forEach((p) => delete p.pushTo); o.done = true; } break;
     case 'tax': if (fire) X.taxT = o.dur; if (t > w + o.dur) o.done = true; break;
-    case 'pillars': if (t <= w) o.d.xs.forEach((x) => hz(x - 20, x + 20, w - t, 'any')); if (fire) { const hit = party.filter((p) => o.d.xs.some((x) => Math.abs(p.x - x) < 18)); bossSfx('drop'); shake = 12; if (hit.length) pxHurt(o, hit, 25, '지옥불!'); } if (after > 16) o.done = true; break;
+    case 'pillars': if (t <= w) o.d.xs.forEach((x) => hz(x - 19, x + 19, w - t, 'any', true)); if (fire) { const hit = party.filter((p) => o.d.xs.some((x) => Math.abs(p.x - x) < 18)); bossSfx('drop'); shake = 12; if (hit.length) pxHurt(o, hit, 25, '지옥불!'); } if (after > 16) o.done = true; break;
     case 'grid': if (t <= w) { o.d.cols.forEach((x) => hz(x - 9, x + 9, w - t, 'any')); hz(20, NET_X, w - t, 'air'); }
       if (fire) { const hit = party.filter((p) => o.d.cols.some((x) => Math.abs(p.x - x) < 9) || p.y < P_GROUND_Y - 22); bossSfx('zap'); shake = 10; if (hit.length) pxHurt(o, hit, 25, '격자 레이저!'); } if (after > 12) o.done = true; break;
-    case 'storm': if (t <= w) { hz(20, o.d.safe - 22, w - t, 'any'); hz(o.d.safe + 22, NET_X, w - t, 'any'); }
+    case 'storm': if (t <= w) { hz(0, o.d.safe - 20, w - t, 'any', true); hz(o.d.safe + 20, NET_X + 40, w - t, 'any', true); }
       if (fire) { const hit = party.filter((p) => Math.abs(p.x - o.d.safe) > 22); bossSfx('zap'); bossSfx('drop'); shake = 18; if (hit.length) pxHurt(o, hit, 25, '광선 폭풍!'); } if (after > 18) o.done = true; break;
     case 'prison': { const p = party[o.d.who];
       if (fire) { p.freezeT = Math.max(p.freezeT || 0, o.dur); p.jailT = o.dur; if (P.blind) p.blindT = Math.max(p.blindT || 0, o.dur); bossSfx('glass'); }
@@ -12629,8 +12629,8 @@ function pxBall() {
   if (X.vortexT > 0 && Math.abs(ball.x - NET_X) < 44 && ball.y < 210) { ball.vy += (Math.random() - 0.5) * 2.2; ball.vx += (Math.random() - 0.5) * 1.2; }
   if (X.beads && X.hitCD <= 0) for (const q of X.beads) if (Math.hypot(ball.x - q.x, ball.y - q.y) < 16) { ball.vx = -ball.vx * 0.8 + (Math.random() - 0.5) * 4; ball.vy = -Math.abs(ball.vy) * 0.6 - 2; X.hitCD = 10; effects.push({ x: q.x, y: q.y, t: 5 }); bossSfx('zap'); break; }
   const crossing = ball.vx > 0 && !ball.byBoss && ball.x > NET_X - 6 && ball.x < NET_X + 30 && X.hitCD <= 0;
-  if (crossing && X.reflT > 0 && ball.power && !(ball.pierce > 0)) { ball.vx = -Math.abs(ball.vx) * 0.6; ball.vy = Math.min(ball.vy, -4); ball.power = false; B.fx = null; X.hitCD = 12; heavy(NET_X + 10, ball.y, 1.2); bossSfx('zap'); bossPop('반사! 강스파이크는 튕겨 나감', PX_COL[bossKind].a, 104, 24); }
-  else if (crossing && X.wallT > 0 && ball.y > 120 && !(ball.pierce > 0)) { ball.vx = -Math.abs(ball.vx) * 0.55; ball.vy = Math.min(ball.vy, -5); ball.power = false; B.fx = null; X.hitCD = 12; heavy(NET_X + 10, ball.y, 1.2); bossSfx('zap'); bossPop('장벽! 더 높게 넘겨', PX_COL[bossKind].a, 104, 24); }
+  if (crossing && X.reflT > 0 && ball.power && !(ball.pierce > 0)) { ball.vx = -Math.abs(ball.vx) * 0.6; ball.vy = Math.min(ball.vy, -4); ball.power = false; if (B.fx) bossApplyFx(ball.y, true); X.hitCD = 12; heavy(NET_X + 10, ball.y, 1.2); bossSfx('zap'); bossPop('반사! 피해는 들어갔지만 공이 튕겨 나옴', PX_COL[bossKind].a, 104, 24); }
+  else if (crossing && X.wallT > 0 && ball.y > 120 && !(ball.pierce > 0)) { ball.vx = -Math.abs(ball.vx) * 0.55; ball.vy = Math.min(ball.vy, -5); ball.power = false; if (B.fx) bossApplyFx(ball.y, true); X.hitCD = 12; heavy(NET_X + 10, ball.y, 1.2); bossSfx('zap'); bossPop('장벽! 피해는 들어감 · 높게 넘기면 통과', PX_COL[bossKind].a, 104, 24); }
 }
 // 보스 페이즈 기믹을 엔진으로 바꿔치기 (이사장은 그대로)
 { const b1 = bossTickP1, b2 = bossTickP2, b3 = bossTickP3;
@@ -13149,6 +13149,45 @@ function rkRecords(body, load) {
   }, st);
 }
 // 랭킹 판(메인 화면)·K 키·로그인 창 버튼 = 랭킹 화면, 메뉴 '📖 기록실' = 기록실
+// =====================================================================
+// ===== (v9.3) AI 팀원이 보스 패턴 알아서 피하기 (보스 3명 모두) =====
+// 위험 구역을 모아서(aiHazards) → 옆으로 피할 곳 찾기(aiSafeX) · 바닥 충격파/낮은 레이저 = 점프 · 높은 레이저 = 점프 안 함
+// 점프 봉인 중엔 점프 안 함 · 얼음판에선 반대로 브레이크 · 실력별 반응 AI_REACT2 [8, 14, 22]프레임
+// 이사장: 책상 그림자 · 재앙 강타 자리 · 벌점 폭탄 (시선은 원래부터 멈춤)
+// =====================================================================
+const AI_REACT2 = [8, 14, 22];
+function aiHazards() {
+  const B = BOSS, hz = [];
+  if (bossKind && B.px) hz.push(...B.px.hz);
+  if (!bossKind) {
+    for (const d of B.desks) if (!d.land) { hz.push({ x0: d.x - 22, x1: d.x + 22, left: Math.max(0, d.warn || 0), kind: 'any', tight: true }); if (!(d.warn > 0) && d.y > 150) hz.push({ x0: d.x - 22, x1: d.x + 22, left: 0, kind: 'ground' }); } // 책상: 옆으로 + 떨어지기 직전 점프
+    if (B.cast && B.cast.k === 'disaster') { const left = Math.max(0, B.cast.dur - B.cast.t); for (const x of B.spots) hz.push({ x0: x - 24, x1: x + 24, left, kind: 'any', tight: true }); }
+    for (const q of B.bombs) hz.push({ x0: q.x - 22, x1: q.x + 22, left: Math.max(0, q.warn || 0), kind: 'any' });
+  }
+  return hz;
+}
+function aiSafeX(p, hz, react) {
+  const bad = hz.filter((h) => h.left <= react && h.kind === 'any'), m = (h) => (h.tight ? 3 : 10), inside = (x) => bad.some((h) => x > h.x0 - m(h) && x < h.x1 + m(h));
+  if (!bad.length || !inside(p.x)) return null;
+  for (let d = 6; d < 220; d += 6) for (const s of [-1, 1]) { const x = p.x + s * d; if (x > 24 && x < NET_X - 6 && !inside(x)) return x; }
+  if (!bad.every((h) => h.tight)) return null;
+  let best = null, bd = -1; // 재앙 강타처럼 완전히 안전한 곳이 없으면: 번개 자리에서 제일 먼 곳
+  for (let x = 26; x < NET_X - 6; x += 4) { const dd = Math.min(...bad.map((h) => Math.abs(x - (h.x0 + h.x1) / 2) - (h.x1 - h.x0) / 2)); if (dd > bd + 0.5 || (Math.abs(dd - bd) <= 0.5 && Math.abs(x - p.x) < Math.abs(best - p.x))) { bd = dd; best = x; } }
+  return best !== null && Math.abs(best - p.x) > 3 ? best : null;
+}
+{ const base = aiInput; aiInput = function (p) {
+  const inp = base(p);
+  if (!bossMode || !BOSS || p.boss || p.side !== 0 || state !== 'play' || cine || !inp) return inp;
+  const react = AI_REACT2[p.aiLevel ?? 1] ?? 14, hz = aiHazards();
+  const sx = aiSafeX(p, hz, react);
+  if (sx !== null) { inp.x = sx < p.x ? -1 : 1; inp.power = false; inp.skill = false; }
+  const near = (h) => p.x > h.x0 - 8 && p.x < h.x1 + 8;
+  if (!(p.nojumpT > 0) && hz.some((h) => h.kind === 'ground' && h.left <= 4 && near(h))) inp.y = -1;   // 바닥 = 점프
+  if (hz.some((h) => h.kind === 'air' && h.left <= react) && inp.y < 0) inp.y = 0;                    // 높은 줄 = 점프 X
+  if (p.nojumpT > 0 && inp.y < 0) inp.y = 0;                                                          // 점프 봉인
+  if (p.iceT > 0) { const v = p.iceV || 0; if (Math.abs(v) > 1 && (inp.x === 0 || (Math.abs(v) > 2.6 && Math.sign(inp.x) === Math.sign(v)))) inp.x = -Math.sign(v); } // 얼음판 브레이크
+  return inp;
+}; }
 
 </script>
 </body>

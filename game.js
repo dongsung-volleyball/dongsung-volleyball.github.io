@@ -1,5 +1,5 @@
 // ===== 설정 (여기만 바꾸면 돼요) =====
-const GAME_VERSION = 'v10.7.2'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
+const GAME_VERSION = 'v10.7.4'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
 const CONFIG = {
   WIN_SCORE: 15,          // 몇 점 내면 이기는지
   FPS: 25,                // 1초에 몇 번 움직이는지 (원작 보통 속도 25)
@@ -8677,7 +8677,24 @@ function netBrowser() {
   if (/Android/.test(u)) return /SamsungBrowser/.test(u) ? 'Android-Samsung' : /KAKAOTALK/i.test(u) ? 'Android-Kakao' : 'Android-Chrome';
   return /Edg\//.test(u) ? 'Edge' : /Chrome\//.test(u) ? 'Chrome' : /Firefox\//.test(u) ? 'Firefox' : 'etc';
 }
-function netJoin(code, tryN = 0) {
+// (v10.7.3) 실패 진단: 연결 통계에서 내 쪽 길 후보 종류(h=같은 와이파이 · s=인터넷 · r=중계 서버) + 상대 후보 개수
+async function netPcStat(pc) {
+  const L = { host: 0, srflx: 0, relay: 0, prflx: 0 }; let R = 0;
+  try { (await pc.getStats()).forEach((x) => { if (x.type === 'local-candidate') L[x.candidateType] = (L[x.candidateType] || 0) + 1; else if (x.type === 'remote-candidate') R++; }); } catch (err) { return 'L:?'; }
+  return `L:h${L.host}s${L.srflx}r${L.relay} R:${R}`;
+}
+// 이 기기에서 길 후보를 몇 개 찾을 수 있는지 4초 동안 직접 찾아봄 (방장 없이 혼자)
+async function netIceTest() {
+  const L = { host: 0, srflx: 0, relay: 0 };
+  try {
+    const pc = new RTCPeerConnection({ iceServers: NET_ICE }); pc.createDataChannel('t');
+    pc.onicecandidate = (e) => { const m = e.candidate && / typ (\w+)/.exec(e.candidate.candidate); if (m) L[m[1]] = (L[m[1]] || 0) + 1; };
+    await pc.setLocalDescription(await pc.createOffer());
+    await new Promise((r) => setTimeout(r, 4000)); pc.close();
+  } catch (err) { return '길 찾기 에러 ' + (err && err.name); }
+  return `길 찾기 h${L.host} s${L.srflx} r${L.relay}`;
+}
+function netJoin(code, tryN = 0, prev = '') {
   if (!/^\d{4}$/.test(code)) { netLobbyMsg('방 코드는 숫자 4자리야!'); return; }
   if (!window.Peer) { netLobbyMsg('온라인 기능을 못 불러왔어 😢\n인터넷 연결을 확인하고 새로고침 해 줘'); return; }
   const id = (NET.joinId = (NET.joinId || 0) + 1); // 이번 시도 번호 (옛 시도에서 늦게 온 이벤트는 무시)
@@ -8690,13 +8707,18 @@ function netJoin(code, tryN = 0) {
   const peer = (NET.peer = new Peer(netRandId(), opts));
   const alive = () => NET.joinId === id && NET.peer === peer;
   const stop = () => { clearTimeout(timer); clearInterval(poll); };
-  const diag = () => { const pc = c && c.peerConnection; return `[${tryN + 1}차 srv:${srv ? 'ok' : 'x'} ice:${pc ? pc.iceConnectionState : '-'} pc:${pc ? pc.connectionState || '-' : '-'} dc:${c && c.dataChannel ? c.dataChannel.readyState : '-'} ${netBrowser()}]`; };
-  const next = () => { // 이번 시도 실패 → 2차로, 2차도 실패면 이유 표시
-    if (!alive()) return; stop();
-    if (tryN === 0) { netJoin(code, 1); return; }
-    const d = diag(); netCleanup();
-    netLobbyMsg('연결 실패 😢 참여 버튼을 다시 눌러 줘\n와이파이 ↔ 데이터를 바꿔 보는 것도 좋아\n' + d);
-    try { console.warn('[온라인] 참가 실패', d); } catch (err) { /* 무시 */ }
+  const diag = async () => { const pc = c && c.peerConnection; return `[${tryN + 1}차 srv:${srv ? 'ok' : 'x'} rd:${pc ? (pc.remoteDescription ? 'y' : 'n') : '-'} ice:${pc ? pc.iceConnectionState : '-'} dc:${c && c.dataChannel ? c.dataChannel.readyState : '-'} ${pc ? await netPcStat(pc) : ''}]`; };
+  let done = false;
+  const next = async () => { // 이번 시도 실패 → 2차로, 2차도 실패면 이유 표시
+    if (!alive() || done) return; done = true; stop();
+    const d = await diag(); if (NET.peer !== peer) return; // 기다리는 사이 창을 닫았으면 끝
+    if (tryN === 0) { netJoin(code, 1, d); return; }
+    netCleanup();
+    netLobbyMsg('연결 실패 😢 진단하는 중... (4초)\n' + prev + '\n' + d);
+    const t = await netIceTest();
+    const msg = '연결 실패 😢 참여 버튼을 다시 눌러 줘\n이 글자를 사진 찍어서 보내 줘!\n' + prev + '\n' + d + '\n[' + t + ' · ' + netBrowser() + ']';
+    if (NET.joinId === id && !NET.peer) netLobbyMsg(msg);
+    try { console.warn('[온라인] 참가 실패', msg); } catch (err) { /* 무시 */ }
   };
   show('① 서버 연결 중...');
   peer.on('open', () => {
@@ -8720,7 +8742,7 @@ function netJoin(code, tryN = 0) {
     if (!alive()) return;
     if (e.type === 'peer-unavailable') { stop(); netLobbyMsg(netErr(e)); return; }
     if (!ok && (e.type === 'webrtc' || e.type === 'negotiation-failed' || e.type === 'unavailable-id' || (tryN === 0 && /network|server-error|socket/.test(e.type)))) { next(); return; }
-    stop(); netLobbyMsg(netErr(e) + '\n' + diag());
+    stop(); diag().then((d) => { if (alive()) netLobbyMsg(netErr(e) + '\n' + d); });
   });
   timer = setTimeout(() => { if (alive() && !ok) next(); }, NET_JOIN_T[tryN]);
   setTimeout(() => { if (alive() && !srv) next(); }, 7000); // ① 서버 접속이 7초 넘게 안 됨 → 바로 다음 시도
@@ -10700,7 +10722,9 @@ function mobileBuildUI() {
   d.addEventListener('pointermove', (e) => {
     const cur = held.get(e.pointerId); if (!cur || !'lrud'.includes(cur)) return;
     const el = document.elementFromPoint(e.clientX, e.clientY), b = el && el.closest && el.closest('[data-role]');
-    const nr = b && 'lrud'.includes(b.dataset.role) ? b.dataset.role : null;
+    let nr = b && 'lrud'.includes(b.dataset.role) ? b.dataset.role : null;
+    // (v10.7.4) ◀▶ 누른 채로 미끄러뜨리면: 버튼 위가 아니어도 두 버튼 가운데 선 기준으로 왼쪽/오른쪽 바로 바뀜 (다시 안 눌러도 됨)
+    if (!nr && 'lr'.includes(cur)) nr = mobileLRSide(e.clientX) || cur;
     if (nr && nr !== cur) { up(e.pointerId); down(e.pointerId, nr); MOBILE.btns.forEach((q) => (q.style.filter = q.dataset.role === nr ? 'brightness(1.8)' : '')); }
   });
   const end = (e) => { up(e.pointerId); MOBILE.btns.forEach((q) => (q.style.filter = '')); };
@@ -10708,6 +10732,12 @@ function mobileBuildUI() {
   d.addEventListener('contextmenu', (e) => e.preventDefault());
   document.body.appendChild(d); MOBILE.ui = d; MOBILE.shown = '';
   mobilePlace();
+}
+function mobileLRSide(x) { // 손가락 x가 ◀ ▶ 가운데 선의 왼쪽이면 'l', 오른쪽이면 'r'
+  const L = MOBILE.btns && MOBILE.btns.find((q) => q.dataset.role === 'l'), R = MOBILE.btns && MOBILE.btns.find((q) => q.dataset.role === 'r');
+  if (!L || !R) return null;
+  const a = L.getBoundingClientRect(), b = R.getBoundingClientRect(), mid = (a.left + a.right + b.left + b.right) / 4;
+  return x < mid ? 'l' : 'r';
 }
 function mobilePlace() { // 화면 크기·방향에 맞춰 버튼 자리 계산 (세로면 게임 화면 아래 빈 곳에)
   if (!MOBILE.ui) return;

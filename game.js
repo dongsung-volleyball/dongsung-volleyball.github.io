@@ -1,5 +1,5 @@
 // ===== 설정 (여기만 바꾸면 돼요) =====
-const GAME_VERSION = 'v10.7.1'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
+const GAME_VERSION = 'v10.7.2'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
 const CONFIG = {
   WIN_SCORE: 15,          // 몇 점 내면 이기는지
   FPS: 25,                // 1초에 몇 번 움직이는지 (원작 보통 속도 25)
@@ -8667,6 +8667,9 @@ function netLost(e) { // 누가 연결이 끊김
 // (v10.7.1) 참가 연결 — 아이폰·맥(사파리)에서 '연결하는 중...'에서 멈추던 문제
 // 1차: 보통 연결 (직접 → 안 되면 중계) / 12초 안에 안 되면 2차: 중계(TURN) 서버만 써서 새로 연결 / 그래도 안 되면 실패 이유 코드 표시
 const NET_JOIN_T = [12000, 15000];
+// (v10.7.2) 참가·방 목록 Peer도 이름표(ID)를 직접 만들어서 들어감. ID를 안 주면 PeerJS가 서버에 'ID 줘'를 먼저 물어보는데
+// 맥·아이폰 사파리에서 이게 대답 없이 멈춤 (진단 코드 srv:x). 방 만들기는 원래 ID를 줘서 됐던 것. Math.random 대신 crypto (온라인 같은 랜덤 안 건드리게)
+function netRandId() { const a = new Uint8Array(8); try { crypto.getRandomValues(a); } catch (err) { for (let i = 0; i < 8; i++) a[i] = Math.floor(nativeRandom() * 256); } return NET_PREFIX + 'u-' + Array.from(a, (x) => x.toString(36).padStart(2, '0')).join(''); }
 function netBrowser() {
   const u = navigator.userAgent || '';
   if (/iPhone|iPad|iPod/.test(u) || (/Macintosh/.test(u) && navigator.maxTouchPoints > 1)) return /CriOS/.test(u) ? 'iOS-Chrome' : /KAKAOTALK/i.test(u) ? 'iOS-Kakao' : 'iOS-Safari';
@@ -8684,7 +8687,7 @@ function netJoin(code, tryN = 0) {
   const opts = netPeerOpts();
   if (tryN) opts.config = Object.assign({}, opts.config, { iceTransportPolicy: 'relay' });
   let c = null, timer = 0, poll = 0, srv = false, ok = false; // ok = 한 번이라도 연결됐음
-  const peer = (NET.peer = new Peer(opts));
+  const peer = (NET.peer = new Peer(netRandId(), opts));
   const alive = () => NET.joinId === id && NET.peer === peer;
   const stop = () => { clearTimeout(timer); clearInterval(poll); };
   const diag = () => { const pc = c && c.peerConnection; return `[${tryN + 1}차 srv:${srv ? 'ok' : 'x'} ice:${pc ? pc.iceConnectionState : '-'} pc:${pc ? pc.connectionState || '-' : '-'} dc:${c && c.dataChannel ? c.dataChannel.readyState : '-'} ${netBrowser()}]`; };
@@ -8716,10 +8719,11 @@ function netJoin(code, tryN = 0) {
   peer.on('error', (e) => {
     if (!alive()) return;
     if (e.type === 'peer-unavailable') { stop(); netLobbyMsg(netErr(e)); return; }
-    if (!ok && (e.type === 'webrtc' || e.type === 'negotiation-failed')) { next(); return; }
+    if (!ok && (e.type === 'webrtc' || e.type === 'negotiation-failed' || e.type === 'unavailable-id' || (tryN === 0 && /network|server-error|socket/.test(e.type)))) { next(); return; }
     stop(); netLobbyMsg(netErr(e) + '\n' + diag());
   });
   timer = setTimeout(() => { if (alive() && !ok) next(); }, NET_JOIN_T[tryN]);
+  setTimeout(() => { if (alive() && !srv) next(); }, 7000); // ① 서버 접속이 7초 넘게 안 됨 → 바로 다음 시도
 }
 
 // ----- 열린 방 목록 (v7.16) -----
@@ -8744,7 +8748,7 @@ function netScanStart() {
   netScanStop(); NET.rooms = {};
   netRoomsDraw('찾는 중...');
   if (!window.Peer) { netRoomsDraw('온라인 기능을 못 불러왔어'); return; }
-  const sp = (NET.scanPeer = new Peer(netPeerOpts()));
+  const sp = (NET.scanPeer = new Peer(netRandId(), netPeerOpts()));
   sp.on('open', () => { netScanOnce(); NET.scanT = setInterval(netScanOnce, 5000); });
   sp.on('error', (e) => { if (e.type !== 'peer-unavailable' && NET.scanPeer === sp) netRoomsDraw('목록을 못 불러왔어 (코드로는 들어갈 수 있어)'); });
 }

@@ -1,5 +1,5 @@
 // ===== 설정 (여기만 바꾸면 돼요) =====
-const GAME_VERSION = 'v10.7.4'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
+const GAME_VERSION = 'v10.7.5'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
 const CONFIG = {
   WIN_SCORE: 15,          // 몇 점 내면 이기는지
   FPS: 25,                // 1초에 몇 번 움직이는지 (원작 보통 속도 25)
@@ -8463,7 +8463,7 @@ function netOpenLobby() {
   if (!NET.ui) {
     const d = document.createElement('div');
     const btn = 'border:0;border-radius:10px;color:#fff;cursor:pointer;font-weight:bold';
-    d.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:10;font-family:"Malgun Gothic",sans-serif';
+    d.style.cssText = 'position:fixed;inset:0;display:flex;background:rgba(0,0,0,.55);z-index:10;font-family:"Malgun Gothic",sans-serif;overflow-y:auto;touch-action:pan-y;padding:8px 0;box-sizing:border-box'; d.classList.add('dsvb-ov'); // (v10.7.5) 화면보다 길면 스크롤
     d.innerHTML = `<div style="background:#1d2340;color:#fff;border:3px solid #ffd84d;border-radius:16px;padding:22px 26px;width:min(420px,90vw);max-height:94vh;overflow-y:auto;box-sizing:border-box;text-align:center;box-shadow:0 10px 40px #000a">
       <div id="netTitle" style="font-size:24px;font-weight:bold;color:#ffd84d;margin-bottom:6px">🌐 온라인 대전</div>
       <div style="display:flex;align-items:center;gap:8px;margin:8px 0 12px;padding:8px 10px;border-radius:10px;background:#0e1226">
@@ -11147,7 +11147,7 @@ function authOpen() {
   if (!AUTH.ui) {
     const d = document.createElement('div'), btn = 'border:0;border-radius:10px;color:#fff;cursor:pointer;font-weight:bold';
     const inp = 'width:100%;box-sizing:border-box;padding:10px;margin-top:8px;font-size:16px;border-radius:10px;border:2px solid #556;background:#0e1226;color:#fff;text-align:center';
-    d.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:20;font-family:"Malgun Gothic",sans-serif;user-select:text;-webkit-user-select:text;touch-action:auto';
+    d.style.cssText = 'position:fixed;inset:0;display:none;background:rgba(0,0,0,.6);z-index:20;font-family:"Malgun Gothic",sans-serif;user-select:text;-webkit-user-select:text;touch-action:pan-y;overflow-y:auto;padding:8px 0;box-sizing:border-box'; d.classList.add('dsvb-ov'); // (v10.7.5) 화면보다 길면 스크롤
     d.innerHTML = `<div style="background:#1d2340;color:#fff;border:3px solid #ffd84d;border-radius:16px;padding:22px 26px;width:min(360px,90vw);max-height:94vh;overflow-y:auto;box-sizing:border-box;text-align:center;box-shadow:0 10px 40px #000a">
       <div style="font-size:24px;font-weight:bold;color:#ffd84d">🏐 동성 배구 대전</div>
       <div id="auWho" style="font-size:13px;color:#cfd6ff;margin:6px 0 12px"></div>
@@ -11498,7 +11498,7 @@ function hName(u, size = 15, click = true) { // 이모지 + 이름(색) + 칭호
 function recOpen(tab) {
   if (!REC.ui) {
     const d = document.createElement('div');
-    d.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:21;font-family:"Malgun Gothic",sans-serif;user-select:text;-webkit-user-select:text;touch-action:auto';
+    d.style.cssText = 'position:fixed;inset:0;display:none;background:rgba(0,0,0,.6);z-index:21;font-family:"Malgun Gothic",sans-serif;user-select:text;-webkit-user-select:text;touch-action:pan-y;overflow-y:auto;padding:8px 0;box-sizing:border-box'; d.classList.add('dsvb-ov'); // (v10.7.5) 화면보다 길면 스크롤
     const panel = rH('div', 'background:#1d2340;color:#fff;border:3px solid #ffd84d;border-radius:16px;padding:16px 18px;width:min(560px,94vw);max-height:92vh;overflow-y:auto;box-sizing:border-box;text-align:center;box-shadow:0 10px 40px #000a');
     panel.id = 'rcPanel'; d.appendChild(panel);
     d.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -14989,3 +14989,52 @@ function socViewClose() { SOC.view = null; SOC.cvs = null; const m = SOC.ui && S
   if (v && SOC.open) socViewOpen(v); }; }
 { const b = socKey; socKey = function (e) { if (SOC.view && (e.code === 'Escape' || e.code === 'Backspace')) { e.preventDefault(); socViewClose(); return; } if (SOC.view) return; b(e); }; }
 { const b = socClose; socClose = function () { socViewClose(); b(); }; }
+
+// =====================================================================
+// (v10.7.5) 손가락(또는 마우스)으로 끌어서 스크롤 — 사용자: '배경화면 창에서 모바일로 스크롤이 안 돼, 모든 화면에서 되게'
+// ① 캔버스 화면: 🃏 카드 꾸미기(배경·핀·칭호 목록) = 위아래, 🛣 트로피 로드 = 좌우. 누르는 순간이 아니라 '뗄 때' 누른 걸로 처리
+//    (끌다가 뗀 건 누른 걸로 안 침 → 스크롤하다가 실수로 장착 안 됨). 트로피 로드는 마우스 휠도 됨
+// ② HTML 창(온라인 대기실·계정 창 등)은 .dsvb-ov = 가운데 정렬은 margin:auto로 → 화면보다 길면 위부터 스크롤
+// =====================================================================
+// 아이폰: body가 touch-action:none이라 창 안 목록도 확실히 손가락 스크롤되게 manipulation
+{ const st = document.createElement('style'); st.textContent = '.dsvb-ov>*{margin:auto!important;flex:none} #rcWrap *,#scWrap *,.dsvb-ov,.dsvb-ov *{touch-action:manipulation}'; document.head.appendChild(st); }
+const DRAG = { id: null, x: 0, y: 0, moved: false, st: '' };
+const DRAG_STATES = ['bcard', 'road'];
+function dragOn() { return DRAG_STATES.includes(state) && !NET.lobby && !window.AUTH_OPEN && !INV.pop; }
+function dragScroll(dx, dy) { // dx·dy = 게임 좌표로 끈 거리 → 움직인 칸 수만큼 돌려줌 (남은 거리는 다음에)
+  if (state === 'bcard') {
+    const G = BCG[BC.tab], rows = Math.ceil(bcList().length / G.cols), max = Math.max(0, rows - G.vis);
+    const step = Math.trunc(dy / G.ch); if (!step) return [0, 0];
+    const nt = Math.max(0, Math.min(max, BC.top - step)), mv = nt - BC.top; if (!mv) return [0, step * G.ch];
+    BC.top = nt; BC.foc = 'grid'; BC.i = Math.max(0, Math.min(bcList().length - 1, BC.i + mv * G.cols)); // 고른 칸도 같이 따라감 (매 프레임 bcFix가 고른 칸이 보이게 맞추니까) — 장착은 안 바뀜
+    return [0, step * G.ch];
+  }
+  if (state === 'road') {
+    const W = RD.gap * 0.6, step = Math.trunc(dx / W); if (!step) return [0, 0];
+    LB.rcur = Math.max(0, Math.min(ROAD.length - 1, LB.rcur - step)); return [step * W, 0];
+  }
+  return [0, 0];
+}
+cv.addEventListener('pointerdown', (e) => {
+  if (!dragOn()) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  Object.assign(DRAG, { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false, st: state });
+  try { cv.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ }
+}, true);
+cv.addEventListener('pointermove', (e) => {
+  if (e.pointerId !== DRAG.id) return;
+  if (state !== DRAG.st) { DRAG.id = null; return; }
+  const k = GW / cv.getBoundingClientRect().width; // 화면 픽셀 → 게임 좌표
+  const dx = (e.clientX - DRAG.x) * k, dy = (e.clientY - DRAG.y) * k;
+  if (!DRAG.moved && Math.hypot(dx, dy) < 7) return; // 살짝 흔들린 건 누른 걸로
+  DRAG.moved = true;
+  const [ux, uy] = dragScroll(dx, dy); DRAG.x += ux / k; DRAG.y += uy / k;
+});
+const dragEnd = (e, tap) => {
+  if (e.pointerId !== DRAG.id) return;
+  const was = DRAG.moved, same = state === DRAG.st; DRAG.id = null;
+  if (tap && !was && same && dragOn()) onCanvasTap(e); // 안 끌고 뗌 = 원래처럼 누르기
+};
+cv.addEventListener('pointerup', (e) => dragEnd(e, true));
+cv.addEventListener('pointercancel', (e) => dragEnd(e, false));
+cv.addEventListener('wheel', (e) => { if (state !== 'road' || !dragOn()) return; e.preventDefault(); const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY; LB.rcur = Math.max(0, Math.min(ROAD.length - 1, LB.rcur + (d > 0 ? 1 : -1))); }, { passive: false });

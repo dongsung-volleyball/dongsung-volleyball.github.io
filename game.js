@@ -1,5 +1,5 @@
 // ===== 설정 (여기만 바꾸면 돼요) =====
-const GAME_VERSION = 'v10.7.5'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
+const GAME_VERSION = 'v10.7.6'; // 게임 버전 (시작 화면·메뉴 오른쪽 아래에 표시, 온라인 버전 확인에도 씀) — 버전 올릴 때 여기만 바꾸기
 const CONFIG = {
   WIN_SCORE: 15,          // 몇 점 내면 이기는지
   FPS: 25,                // 1초에 몇 번 움직이는지 (원작 보통 속도 25)
@@ -8680,8 +8680,14 @@ function netBrowser() {
 // (v10.7.3) 실패 진단: 연결 통계에서 내 쪽 길 후보 종류(h=같은 와이파이 · s=인터넷 · r=중계 서버) + 상대 후보 개수
 async function netPcStat(pc) {
   const L = { host: 0, srflx: 0, relay: 0, prflx: 0 }; let R = 0;
-  try { (await pc.getStats()).forEach((x) => { if (x.type === 'local-candidate') L[x.candidateType] = (L[x.candidateType] || 0) + 1; else if (x.type === 'remote-candidate') R++; }); } catch (err) { return 'L:?'; }
-  return `L:h${L.host}s${L.srflx}r${L.relay} R:${R}`;
+  let st; try { st = await pc.getStats(); } catch (err) { return 'L:?'; }
+  const byId = {}; let pair = null, dtls = '-';
+  st.forEach((x) => { byId[x.id] = x; if (x.type === 'local-candidate') L[x.candidateType] = (L[x.candidateType] || 0) + 1; else if (x.type === 'remote-candidate') R++; });
+  // (v10.7.6) 실제로 쓰는 길(P: host=같은 와이파이 · srflx=직접 · relay=중계) + 마지막 통로 잠금 상태(D: DTLS)
+  st.forEach((x) => { if (x.type === 'transport') { dtls = x.dtlsState || dtls; if (x.selectedCandidatePairId) pair = byId[x.selectedCandidatePairId]; } });
+  if (!pair) st.forEach((x) => { if (x.type === 'candidate-pair' && x.state === 'succeeded' && (x.nominated || !pair)) pair = x; });
+  const lc = pair && byId[pair.localCandidateId];
+  return `L:h${L.host}s${L.srflx}r${L.relay} R:${R} P:${lc ? lc.candidateType : '-'} D:${dtls}`;
 }
 // 이 기기에서 길 후보를 몇 개 찾을 수 있는지 4초 동안 직접 찾아봄 (방장 없이 혼자)
 async function netIceTest() {
@@ -8703,7 +8709,7 @@ function netJoin(code, tryN = 0, prev = '') {
   const show = (t) => netLobbyMsg(head + t);
   const opts = netPeerOpts();
   if (tryN) opts.config = Object.assign({}, opts.config, { iceTransportPolicy: 'relay' });
-  let c = null, timer = 0, poll = 0, srv = false, ok = false; // ok = 한 번이라도 연결됐음
+  let c = null, timer = 0, poll = 0, srv = false, ok = false, more = false; // ok = 한 번이라도 연결됐음
   const peer = (NET.peer = new Peer(netRandId(), opts));
   const alive = () => NET.joinId === id && NET.peer === peer;
   const stop = () => { clearTimeout(timer); clearInterval(poll); };
@@ -8731,7 +8737,11 @@ function netJoin(code, tryN = 0, prev = '') {
       const pc = c.peerConnection; if (!pc) return;
       const ice = pc.iceConnectionState;
       if (ice === 'failed') { next(); return; } // 길이 막힘 → 기다리지 말고 바로 다음 방법
-      if (pc.remoteDescription) show(`① 서버 ✔  ② 방장 찾음 ✔  ③ 길 뚫는 중... (${ice})`);
+      if ((ice === 'connected' || ice === 'completed') && !more) { // (v10.7.6) 길은 뚫렸는데 통로가 늦게 열리면 20초 더 기다림 (예전엔 12초에 끊어 버렸음)
+        more = true; clearTimeout(timer); timer = setTimeout(() => { if (alive() && !ok) next(); }, 20000);
+      }
+      if (more) show(`① 서버 ✔  ② 방장 찾음 ✔  ③ 길 뚫림 ✔  ④ 데이터 통로 여는 중...`);
+      else if (pc.remoteDescription) show(`① 서버 ✔  ② 방장 찾음 ✔  ③ 길 뚫는 중... (${ice})`);
     }, 500);
     c.on('open', () => { if (!alive()) return; ok = true; stop(); show('① ✔  ② ✔  ③ 연결 성공! 방장 대답 기다리는 중...'); try { c.send({ t: 'name', name: myName() || '' }); } catch (err) { /* 무시 */ } });
     c.on('data', (m) => { if (NET.conn === c) netOnData(m, 0); });
